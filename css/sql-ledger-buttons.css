@@ -213,6 +213,22 @@ body.menu {
   margin: 4px;
 }
 
+.menu-user {
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.menu-user img {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.menu-user-name {
+  vertical-align: middle;
+  font-size: 11px;
+  color: #444444;
+}
+
 .menu-search-row {
   display: inline-block;
   white-space: nowrap;

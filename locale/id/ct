@@ -99,6 +99,7 @@ $self{texts} = {
   'Tax Number'                  => 'Nomor Pajak',
   'Tax Number / SSN'            => 'Nomor Pajak/ SSN',
   'Terms'                       => 'Termin',
+  'Total Customer'              => 'Total Pelanggan',
   'To'                          => 'Sampai',
   'Total'                       => 'Total',
   'Type of Business'            => 'Jenis Bisnis',

@@ -984,6 +984,16 @@ sub list_names {
     $option .= $locale->text('Closed');
   }
 
+  if ($form->{db} eq 'customer') {
+    my %seen_customer;
+    my $total_customer = 0;
+    for my $c (@{ $form->{CT} }) {
+      next if $seen_customer{$c->{id}}++;
+      $total_customer++;
+    }
+    $option .= "\n<br>".$locale->text('Total Customer')." : $total_customer";
+  }
+
   $form->helpref("list_$form->{db}", $myconfig{countrycode});
 
   $form->{callback} = "$callback&sort=$form->{sort}";

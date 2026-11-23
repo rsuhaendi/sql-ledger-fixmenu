@@ -167,6 +167,16 @@ function FilterMenu(value) {
     for (i = 0; i < cts.length; i++) {
       cts[i].style.display = cts[i].getAttribute('data-display') \|\| 'none';
     }
+    var allGroups = document.getElementsByClassName('submenu-group');
+    for (i = 0; i < allGroups.length; i++) {
+      allGroups[i].style.display = '';
+      var gh2 = allGroups[i].querySelector('.menuOut, .menuOver');
+      if (gh2) { gh2.style.display = ''; }
+    }
+    var allHeaders = document.querySelectorAll('body > .menuOut');
+    for (i = 0; i < allHeaders.length; i++) {
+      allHeaders[i].style.display = '';
+    }
   }
 }
 document.onselectstart = new Function("return false");

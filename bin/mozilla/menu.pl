@@ -185,7 +185,7 @@ function FilterMenu(value) {
   }
 }
 
-function CollapseAllMenus() {
+function RefreshMenu() {
   var cts = document.getElementsByClassName('submenu-container');
   for (var i = 0; i < cts.length; i++) {
     cts[i].setAttribute('data-display', 'display: none;');
@@ -209,7 +209,7 @@ document.onselectstart = new Function("return false");
 <img src=$images/sql-ledger.gif width=80 border=0>
 
 <br>$myconfig{name}
-<br><input type="button" id="menu-collapse" class="menu-collapse" value="&minus;" title="Tutup semua menu" onclick="CollapseAllMenus()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
+<br><input type="button" id="menu-collapse" class="menu-collapse" value="&#8635;" title="Refresh menu (tutup semua)" onclick="RefreshMenu()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
 |;
 
   if ($form->{js}) {

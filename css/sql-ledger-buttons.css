@@ -230,12 +230,13 @@ body.menu {
   border: 1px solid #999999;
   background-color: #ffffff;
   color: #000000;
+  vertical-align: middle;
 }
 
 #menu-collapse {
   box-sizing: border-box;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   margin: 0 2px 0 0;
   padding: 0;
   border: 1px solid #999999;
@@ -243,7 +244,7 @@ body.menu {
   background-color: #ffffff;
   color: #666666;
   font-size: 13px;
-  line-height: 15px;
+  line-height: 18px;
   text-align: center;
   cursor: pointer;
   vertical-align: middle;
@@ -251,7 +252,7 @@ body.menu {
 
 body.menu > hr:first-of-type {
   width: 120px;
-  margin: 0 0 8px 18px;
+  margin: 0 0 8px 0;
   text-align: left;
 }
 

@@ -275,7 +275,7 @@ body.menu {
 #menu-collapse:hover,
 #menu-collapse:active {
   background-color: #d6d6d6;
-  color: #000000;
+  color: #666666;
 }
 
 body.menu > hr:first-of-type {

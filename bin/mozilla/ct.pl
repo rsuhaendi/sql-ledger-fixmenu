@@ -65,7 +65,7 @@ sub create_links {
   if ($form->{all_contact}->[0]->{typeofcontact}) {
     $form->{typeofcontact} = $form->{all_contact}->[0]->{typeofcontact};
   }
-  $form->{typeofcontact} ||= "company";
+  $form->{typeofcontact} ||= ($form->{db} eq 'customer') ? "person" : "company";
   for (qw(email phone fax mobile salutation firstname lastname gender contacttitle occupation)) { $form->{$_} = $form->{all_contact}->[0]->{$_} }
   $form->{gender} ||= 'M';
   

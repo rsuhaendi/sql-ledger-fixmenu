@@ -89,7 +89,7 @@ function SetActiveMenu(el) {
 function FilterMenu(value) {
   var term = value.toLowerCase();
   var items = document.getElementsByClassName('submenu-item');
-  var i;
+  var i, j;
   for (i = 0; i < items.length; i++) {
     var text = items[i].textContent \|\| items[i].innerText;
     items[i].style.display = (!term \|\| text.toLowerCase().indexOf(term) !== -1) ? '' : 'none';
@@ -101,13 +101,37 @@ function FilterMenu(value) {
     var any = false;
     if (container) {
       var children = container.getElementsByClassName('submenu-item');
-      for (var j = 0; j < children.length; j++) {
+      for (j = 0; j < children.length; j++) {
         if (children[j].style.display !== 'none') { any = true; }
       }
     }
     groups[i].style.display = (!term \|\| any) ? '' : 'none';
     if (header) { header.style.display = (!term \|\| any) ? '' : 'none'; }
     if (container) { container.style.display = term ? (any ? 'block' : 'none') : (container.getAttribute('data-display') \|\| 'none'); }
+  }
+  var topHeaders = document.querySelectorAll('body > .menuOut, body > div.menuOut');
+  for (i = 0; i < topHeaders.length; i++) {
+    var hdr = topHeaders[i];
+    var onclick = hdr.getAttribute('onclick') \|\| '';
+    var m = onclick.match(/SwitchMenu\('(sub\d+)'\)/);
+    if (!m) {
+      if (term) {
+        var htxt = hdr.textContent \|\| hdr.innerText;
+        hdr.style.display = htxt.toLowerCase().indexOf(term) !== -1 ? '' : 'none';
+      } else {
+        hdr.style.display = '';
+      }
+      continue;
+    }
+    var cont = document.getElementById(m[1]);
+    if (!cont) { continue; }
+    var any2 = false;
+    var citems = cont.getElementsByClassName('submenu-item');
+    for (j = 0; j < citems.length; j++) {
+      if (citems[j].style.display !== 'none') { any2 = true; }
+    }
+    hdr.style.display = (!term \|\| any2) ? '' : 'none';
+    cont.style.display = term ? (any2 ? 'block' : 'none') : (cont.getAttribute('data-display') \|\| 'none');
   }
   if (!term) {
     var cts = document.getElementsByClassName('submenu-container');

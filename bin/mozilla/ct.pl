@@ -504,6 +504,16 @@ sub search {
 	</tr>
 |;
 
+  if ($form->{db} eq 'customer') {
+    $orphan .= qq|
+        <tr>
+	  <th align=right nowrap>|.$locale->text('Jenis Pembayaran').qq|</th>
+	  <td><input name="billing_prabayar" type=checkbox class=checkbox value=Y checked>&nbsp;Prabayar
+	      &nbsp;<input name="billing_pascabayar" type=checkbox class=checkbox value=Y checked>&nbsp;Pascabayar</td>
+	</tr>
+|;
+  }
+
 
   &transactions;
   &include_in_report;
@@ -923,6 +933,18 @@ sub list_names {
     $callback .= "&email=".$form->escape($form->{email},1);
     $href .= "&email=".$form->escape($form->{email});
     $option .= "\n<br>".$locale->text('E-mail')." : $form->{email}";
+  }
+  if ($form->{db} eq 'customer') {
+    if ($form->{billing_prabayar}) {
+      $callback .= "&billing_prabayar=Y";
+      $href .= "&billing_prabayar=Y";
+      $option .= "\n<br>".$locale->text('Jenis Pembayaran')." : Prabayar";
+    }
+    if ($form->{billing_pascabayar}) {
+      $callback .= "&billing_pascabayar=Y";
+      $href .= "&billing_pascabayar=Y";
+      $option .= "\n<br>".$locale->text('Jenis Pembayaran')." : Pascabayar";
+    }
   }
   if ($form->{transdatefrom}) {
     $callback .= "&transdatefrom=$form->{transdatefrom}";

@@ -720,6 +720,15 @@ sub search {
     }
     $form->{l_invnumber} = $form->{l_ordnumber} = $form->{l_quonumber} = "";
   }
+
+  if ($form->{db} eq 'customer') {
+    my @billing;
+    push @billing, $dbh->quote('Prabayar') if $form->{billing_prabayar};
+    push @billing, $dbh->quote('Pascabayar') if $form->{billing_pascabayar};
+    if (@billing == 1) {
+      $where .= " AND c.billing_type = $billing[0]";
+    }
+  }
   
   ($form->{transdatefrom}, $form->{transdateto}) = $form->from_to($form->{year}, $form->{month}, $form->{interval}) if $form->{year} && $form->{month};
 

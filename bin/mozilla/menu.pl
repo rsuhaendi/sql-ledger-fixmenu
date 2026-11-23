@@ -61,8 +61,10 @@ function SwitchMenu(obj) {
 
     if (el.style.display == "none") {
       el.style.display = "block"; //display the block of info
+      el.setAttribute('data-display', 'display: block;');
     } else {
       el.style.display = "none";
+      el.setAttribute('data-display', 'display: none;');
     }
   }
 }
@@ -70,6 +72,48 @@ function SwitchMenu(obj) {
 function ChangeClass(menu, newClass) {
   if (document.getElementById) {
     document.getElementById(menu).className = newClass;
+  }
+}
+
+function SetActiveMenu(el) {
+  var active = document.getElementsByClassName('menuActive');
+  while (active.length) {
+    active[0].className = 'submenu submenu-item';
+  }
+  var parent = el.parentNode;
+  if (parent && parent.className.indexOf('submenu-item') !== -1) {
+    parent.className = 'submenu submenu-item menuActive';
+  }
+}
+
+function FilterMenu(value) {
+  var term = value.toLowerCase();
+  var items = document.getElementsByClassName('submenu-item');
+  var i;
+  for (i = 0; i < items.length; i++) {
+    var text = items[i].textContent \|\| items[i].innerText;
+    items[i].style.display = (!term \|\| text.toLowerCase().indexOf(term) !== -1) ? '' : 'none';
+  }
+  var groups = document.getElementsByClassName('submenu-group');
+  for (i = 0; i < groups.length; i++) {
+    var container = groups[i].querySelector('.submenu-container');
+    var header = groups[i].querySelector('.menuOut, .menuOver');
+    var any = false;
+    if (container) {
+      var children = container.getElementsByClassName('submenu-item');
+      for (var j = 0; j < children.length; j++) {
+        if (children[j].style.display !== 'none') { any = true; }
+      }
+    }
+    groups[i].style.display = (!term \|\| any) ? '' : 'none';
+    if (header) { header.style.display = (!term \|\| any) ? '' : 'none'; }
+    if (container) { container.style.display = term ? (any ? 'block' : 'none') : (container.getAttribute('data-display') \|\| 'none'); }
+  }
+  if (!term) {
+    var cts = document.getElementsByClassName('submenu-container');
+    for (i = 0; i < cts.length; i++) {
+      cts[i].style.display = cts[i].getAttribute('data-display') \|\| 'none';
+    }
   }
 }
 document.onselectstart = new Function("return false");
@@ -80,6 +124,7 @@ document.onselectstart = new Function("return false");
 <img src=$images/sql-ledger.gif width=80 border=0>
 
 <br>$myconfig{name}
+<br><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
 |;
 
   if ($form->{js}) {
@@ -198,7 +243,7 @@ sub jsmenu_frame {
 	print qq|
         <div class="submenu-group">
         <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu submenu-container" id="sub$i" style="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="$display">|;
 	
 	# remove same level items
 	map { shift @menuorder } grep /^$item/, @menuorder;
@@ -234,7 +279,7 @@ sub jsmenu_frame {
 
 	print qq|
 <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu submenu-container" id="sub$i" style="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="$display">|;
 	
 	&jsmenu_frame($menu, $item);
 	

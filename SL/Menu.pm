@@ -55,6 +55,10 @@ sub menuitem {
   if ($target) {
     $str .= qq| target=$target|;
   }
+
+  if ($form->{js} && $target ne 'acc_menu') {
+    $str .= qq| onclick="SetActiveMenu(this)"|;
+  }
   
   $str .= qq|>|;
   

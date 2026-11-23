@@ -1570,11 +1570,16 @@ sub site_report {
   </tr>
 |;
 
+  $callback = $form->escape("pe.pl?action=site_report&path=$form->{path}&login=$form->{login}&js=$form->{js}", 1);
+
   $i = 0;
   foreach my $site (@{ $form->{SITE} }) {
     $i++;
     $i %= 2;
-    print qq|  <tr valign=top class=listrow$i><td>|.$form->quote($site->{site}).qq|</td></tr>\n|;
+
+    $href = qq|$form->{script}?path=$form->{path}&action=edit&type=site&id=$site->{id}&login=$form->{login}&js=$form->{js}&callback=$callback|;
+
+    print qq|  <tr valign=top class=listrow$i><td><a href=$href>|.$form->quote($site->{site}).qq|</a></td></tr>\n|;
   }
 
   if (!@{ $form->{SITE} }) {

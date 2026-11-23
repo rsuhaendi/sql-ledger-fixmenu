@@ -225,10 +225,10 @@ body.menu {
 
 .menu-user-name {
   display: block;
-  text-align: right;
+  text-align: left;
   font-size: 11px;
   color: #444444;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px 22px;
 }
 
 .menu-search-row {
@@ -240,7 +240,7 @@ body.menu {
 
 .menu-search {
   box-sizing: border-box;
-  width: 120px;
+  width: 100px;
   margin: 0;
   padding: 2px 4px;
   font-size: 11px;
@@ -269,7 +269,7 @@ body.menu {
 }
 
 body.menu > hr:first-of-type {
-  width: 142px;
+  width: 122px;
   margin: 0 0 8px 0;
   text-align: left;
 }

@@ -273,7 +273,7 @@ body.menu {
 }
 
 #menu-collapse:hover,
-#menu-collapse:focus {
+#menu-collapse:active {
   background-color: #d6d6d6;
   color: #000000;
 }

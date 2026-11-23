@@ -130,7 +130,15 @@ function FilterMenu(value) {
     var hdr = topHeaders[i];
     var onclick = hdr.getAttribute('onclick') \|\| '';
     var m = onclick.indexOf("SwitchMenu('sub");
-    if (m === -1) { continue; }
+    if (m === -1) {
+      if (term) {
+        var htxt = (hdr.textContent \|\| hdr.innerText).toLowerCase();
+        hdr.style.display = htxt.indexOf(term) !== -1 ? '' : 'none';
+      } else {
+        hdr.style.display = '';
+      }
+      continue;
+    }
     var id = onclick.substring(m + 12);
     id = id.substring(0, id.indexOf("'"));
     var cont = document.getElementById(id);

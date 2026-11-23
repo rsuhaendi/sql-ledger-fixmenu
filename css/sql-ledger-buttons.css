@@ -209,10 +209,21 @@ body.menu {
   text-decoration: none;
 }
 
+body.menu {
+  margin: 4px;
+}
+
+.menu-search-row {
+  display: inline-block;
+  white-space: nowrap;
+  margin: 4px 0 8px 0;
+  vertical-align: middle;
+}
+
 .menu-search {
   box-sizing: border-box;
   width: 120px;
-  margin: 4px 0 8px 0;
+  margin: 0;
   padding: 2px 4px;
   font-size: 11px;
   font-family: Verdana, Arial, Helvetica, sans-serif;
@@ -223,9 +234,9 @@ body.menu {
 
 #menu-collapse {
   box-sizing: border-box;
-  width: 18px;
-  height: 18px;
-  margin: 4px 4px 8px 0;
+  width: 16px;
+  height: 16px;
+  margin: 0 2px 0 0;
   padding: 0;
   border: 1px solid #999999;
   border-radius: 50%;
@@ -240,7 +251,7 @@ body.menu {
 
 body.menu > hr:first-of-type {
   width: 120px;
-  margin: 0 0 8px 0;
+  margin: 0 0 8px 18px;
   text-align: left;
 }
 

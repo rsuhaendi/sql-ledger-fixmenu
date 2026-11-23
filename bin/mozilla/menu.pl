@@ -61,10 +61,10 @@ function SwitchMenu(obj) {
 
     if (el.style.display == "none") {
       el.style.display = "block"; //display the block of info
-      el.setAttribute('data-display', 'display: block;');
+      el.setAttribute('data-display', 'block');
     } else {
       el.style.display = "none";
-      el.setAttribute('data-display', 'display: none;');
+      el.setAttribute('data-display', 'none');
     }
   }
 }
@@ -73,6 +73,12 @@ function ChangeClass(menu, newClass) {
   if (document.getElementById) {
     document.getElementById(menu).className = newClass;
   }
+}
+
+function menuState(el) {
+  var d = el.getAttribute('data-display');
+  if (d && d.indexOf('block') !== -1) { return 'block'; }
+  return 'none';
 }
 
 function SetActiveMenu(el) {
@@ -122,7 +128,7 @@ function FilterMenu(value) {
       }
       groups[i].style.display = (!term \|\| any) ? '' : 'none';
       if (header) { header.style.display = (!term \|\| any) ? '' : 'none'; }
-      if (container) { container.style.display = term ? (any ? 'block' : 'none') : (container.getAttribute('data-display') \|\| 'none'); }
+      if (container) { container.style.display = term ? (any ? 'block' : 'none') : menuState(container); }
     }
   }
   var topHeaders = document.querySelectorAll('body > .menuOut');
@@ -160,7 +166,7 @@ function FilterMenu(value) {
       for (j = 0; j < cgroups.length; j++) { cgroups[j].style.display = ''; var gh = cgroups[j].querySelector('.menuOut, .menuOver'); if (gh) gh.style.display = ''; }
     }
     hdr.style.display = (!term \|\| any2) ? '' : 'none';
-    cont.style.display = term ? (any2 ? 'block' : 'none') : (cont.getAttribute('data-display') \|\| 'none');
+    cont.style.display = term ? (any2 ? 'block' : 'none') : menuState(cont);
   }
   if (!term) {
     var allItems = document.getElementsByClassName('submenu-item');
@@ -169,8 +175,7 @@ function FilterMenu(value) {
     }
     var cts = document.getElementsByClassName('submenu-container');
     for (i = 0; i < cts.length; i++) {
-      var dd = cts[i].getAttribute('data-display') \|\| '';
-      cts[i].style.display = (dd.indexOf('block') !== -1) ? 'block' : 'none';
+      cts[i].style.display = menuState(cts[i]);
     }
     var allGroups = document.getElementsByClassName('submenu-group');
     for (i = 0; i < allGroups.length; i++) {
@@ -188,7 +193,7 @@ function FilterMenu(value) {
 function RefreshMenu() {
   var cts = document.getElementsByClassName('submenu-container');
   for (var i = 0; i < cts.length; i++) {
-    cts[i].setAttribute('data-display', 'display: none;');
+    cts[i].setAttribute('data-display', 'none');
   }
   var groups = document.getElementsByClassName('submenu-group');
   for (i = 0; i < groups.length; i++) {
@@ -209,7 +214,7 @@ document.onselectstart = new Function("return false");
 <img src=$images/sql-ledger.gif width=80 border=0>
 
 <br>$myconfig{name}
-<br><input type="button" id="menu-collapse" class="menu-collapse" value="&#8635;" title="Refresh menu (tutup semua)" onclick="RefreshMenu()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
+<br><span class="menu-search-row"><input type="button" id="menu-collapse" class="menu-collapse" value="&#8635;" title="Refresh menu (tutup semua)" onclick="RefreshMenu()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)"></span>
 |;
 
   if ($form->{js}) {
@@ -328,7 +333,7 @@ sub jsmenu_frame {
 	print qq|
         <div class="submenu-group">
         <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="none">|;
 	
 	# remove same level items
 	map { shift @menuorder } grep /^$item/, @menuorder;
@@ -364,7 +369,7 @@ sub jsmenu_frame {
 
 	print qq|
 <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display" data-display="none">|;
 	
 	&jsmenu_frame($menu, $item);
 	

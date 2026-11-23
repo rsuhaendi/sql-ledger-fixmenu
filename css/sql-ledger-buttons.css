@@ -224,15 +224,17 @@ body.menu {
 }
 
 .menu-user-name {
-  vertical-align: middle;
+  display: block;
+  text-align: right;
   font-size: 11px;
   color: #444444;
+  margin: 0 0 4px 0;
 }
 
 .menu-search-row {
   display: inline-block;
   white-space: nowrap;
-  margin: 4px 0 8px 0;
+  margin: 0 0 8px 0;
   vertical-align: middle;
 }
 

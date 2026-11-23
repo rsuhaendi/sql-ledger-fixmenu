@@ -211,8 +211,9 @@ document.onselectstart = new Function("return false");
 
 <body class=menu />
 
-<div class="menu-user"><img src=$images/sql-ledger.gif width=80 border=0><span class="menu-user-name">$myconfig{name}</span></div>
-<br><span class="menu-search-row"><input type="button" id="menu-collapse" class="menu-collapse" value="&#8635;" title="Refresh menu (tutup semua)" onclick="RefreshMenu()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)"></span>
+<div class="menu-user"><img src=$images/sql-ledger.gif width=80 border=0></div>
+<div class="menu-user-name">$myconfig{name}</div>
+<span class="menu-search-row"><input type="button" id="menu-collapse" class="menu-collapse" value="&#8635;" title="Refresh menu (tutup semua)" onclick="RefreshMenu()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)"></span>
 |;
 
   if ($form->{js}) {

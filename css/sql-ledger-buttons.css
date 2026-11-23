@@ -232,15 +232,16 @@ body.menu {
 }
 
 .menu-search-row {
-  display: inline-block;
+  display: flex;
+  align-items: center;
   white-space: nowrap;
   margin: 0 0 8px 0;
-  vertical-align: middle;
 }
 
 .menu-search {
   box-sizing: border-box;
-  width: 100px;
+  flex: 1 1 0;
+  min-width: 0;
   margin: 0;
   padding: 2px 4px;
   font-size: 11px;
@@ -253,6 +254,7 @@ body.menu {
 
 #menu-collapse {
   box-sizing: border-box;
+  flex: 0 0 20px;
   width: 20px;
   height: 20px;
   margin: 0 2px 0 0;
@@ -269,7 +271,7 @@ body.menu {
 }
 
 body.menu > hr:first-of-type {
-  width: 122px;
+  width: 100%;
   margin: 0 0 8px 0;
   text-align: left;
 }

@@ -885,6 +885,27 @@ sub delete_partsgroup {
 }
 
 
+sub sites {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect($myconfig);
+
+  my $query = qq|SELECT id, site
+                 FROM site
+		 ORDER BY site|;
+  my $sth = $dbh->prepare($query);
+  $sth->execute || $form->dberror($query);
+
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    push @{ $form->{SITE} }, $ref;
+  }
+
+  $sth->finish;
+  $dbh->disconnect;
+
+}
+
+
 sub get_site {
   my ($self, $myconfig, $form) = @_;
 

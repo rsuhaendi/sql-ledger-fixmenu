@@ -1549,6 +1549,49 @@ sub partsgroup_footer {
 }
 
 
+sub site_report {
+
+  PE->sites(\%myconfig, \%$form);
+
+  $form->{title} = $locale->text('Tampilkan Site') . " / $form->{company}";
+
+  $form->header;
+
+  print qq|
+<body>
+
+<table border=0 width=100%>
+  <tr>
+    <th class=listtop colspan=1>$form->{title}</th>
+  </tr>
+  <tr height="5"></tr>
+  <tr class=listheading>
+    <th class=listtop>|.$locale->text('Nama Site').qq|</th>
+  </tr>
+|;
+
+  $i = 0;
+  foreach my $site (@{ $form->{SITE} }) {
+    $i++;
+    $i %= 2;
+    print qq|  <tr valign=top class=listrow$i><td>|.$form->quote($site->{site}).qq|</td></tr>\n|;
+  }
+
+  if (!@{ $form->{SITE} }) {
+    print qq|  <tr class=listrow0><td>&nbsp;</td></tr>\n|;
+  }
+
+  print qq|
+</table>
+<hr size=3 noshade>
+
+</body>
+</html>
+|;
+
+}
+
+
 sub pricegroup_report {
 
   $form->{pricegroup} = $form->unescape($form->{pricegroup});

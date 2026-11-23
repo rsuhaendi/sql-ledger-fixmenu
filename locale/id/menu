@@ -82,6 +82,7 @@ $self{texts} = {
   'Services'                    => 'Jasa',
   'Ship'                        => 'Kirim',
   'System'                      => 'Sistem',
+  'Tampilkan Site'              => 'Tampilkan Site',
   'Tax collected'               => 'Pajak Terkumpul',
   'Tax paid'                    => 'Pajak Dibayar',
   'Text Templates'              => 'Template Text',

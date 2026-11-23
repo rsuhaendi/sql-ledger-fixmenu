@@ -210,6 +210,7 @@ body.menu {
 }
 
 .menu-search {
+  box-sizing: border-box;
   width: 120px;
   margin: 4px 0 8px 0;
   padding: 2px 4px;
@@ -218,6 +219,12 @@ body.menu {
   border: 1px solid #999999;
   background-color: #ffffff;
   color: #000000;
+}
+
+body.menu > hr:first-of-type {
+  width: 120px;
+  margin: 0 0 8px 0;
+  text-align: left;
 }
 
 .listtop { font-size: 11px; background-color: black; color: white; }

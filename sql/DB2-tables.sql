@@ -383,6 +383,14 @@ CREATE TABLE partsgroup (
 ) IN LEDGER_TS
 @
 ---------------------------------------------------------
+-- DDL Statements for table site
+---------------------------------------------------------
+CREATE TABLE site (                                     
+  id INTEGER,                                           
+  site VARCHAR(100)                                     
+) IN LEDGER_TS
+@
+---------------------------------------------------------
 --!#
 --!# functions N/A
 --!#
@@ -516,6 +524,16 @@ END
 ---------------------------------------------------------
 CREATE TRIGGER partsgroupid                        
 NO CASCADE BEFORE INSERT ON partsgroup              
+REFERENCING NEW AS new_id                            
+FOR EACH ROW MODE DB2SQL                              
+BEGIN ATOMIC                                           
+set new_id.id = NEXTVAL FOR id;                    
+END@
+---------------------------------------------------------
+-- DDL Statements for trigger siteid
+---------------------------------------------------------
+CREATE TRIGGER siteid                              
+NO CASCADE BEFORE INSERT ON site                    
 REFERENCING NEW AS new_id                            
 FOR EACH ROW MODE DB2SQL                              
 BEGIN ATOMIC                                           

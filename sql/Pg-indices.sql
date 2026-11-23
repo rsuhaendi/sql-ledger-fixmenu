@@ -74,6 +74,9 @@ create unique index projectnumber_key on project (projectnumber);
 --
 create index partsgroup_id_key on partsgroup (id);
 create unique index partsgroup_key on partsgroup (partsgroup);
+
+create index site_id_key on site (id);
+create unique index site_key on site (site);
 --
 create index status_trans_id_key on status (trans_id);
 --

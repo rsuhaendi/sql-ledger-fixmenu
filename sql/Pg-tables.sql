@@ -460,6 +460,11 @@ CREATE TABLE partsgroup (
   code text,
   image text
 );
+
+CREATE TABLE site (
+  id int DEFAULT nextval('id'),
+  site text
+);
 --
 CREATE TABLE status (
   trans_id int,

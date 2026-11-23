@@ -327,6 +327,11 @@ CREATE TABLE partsgroup (
   id INTEGER,
   partsgroup VARCHAR2(100)
 );
+
+CREATE TABLE site (
+  id INTEGER,
+  site VARCHAR2(100)
+);
 --
 CREATE TABLE status (
   trans_id INTEGER,
@@ -430,6 +435,13 @@ BEGIN
 END;;
 --
 CREATE OR REPLACE TRIGGER partsgroupid BEFORE INSERT ON partsgroup FOR EACH ROW
+BEGIN
+  SELECT id.nextval
+  INTO :new.id
+FROM DUAL;--
+END;;
+--
+CREATE OR REPLACE TRIGGER siteid BEFORE INSERT ON site FOR EACH ROW
 BEGIN
   SELECT id.nextval
   INTO :new.id

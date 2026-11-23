@@ -17,6 +17,7 @@ $self{texts} = {
   'Add Pricegroup'              => 'Tambah Kelompok Harga',
   'Add Project'                 => 'Tambah Proyek',
   'Add Service'                 => 'Tambah Jasa',
+  'Add Site'                    => 'Tambah Site',
   'Add Transaction'             => 'Tambah Transaksi',
   'Add Vendor'                  => 'Tambah Supplier',
   'All Items'                   => 'Semua Item',

@@ -885,6 +885,28 @@ sub delete_partsgroup {
 }
 
 
+sub get_site {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect($myconfig);
+  
+  $form->{id} *= 1;
+  
+  my $query = qq|SELECT id, site
+                 FROM site
+	         WHERE id = $form->{id}|;
+  my $sth = $dbh->prepare($query);
+  $sth->execute || $form->dberror($query);
+
+  my $ref = $sth->fetchrow_hashref(NAME_lc);
+  for (keys %$ref) { $form->{$_} = $ref->{$_} }
+
+  $sth->finish;
+  $dbh->disconnect;
+
+}
+
+
 sub delete_pricegroup {
   my ($self, $myconfig, $form) = @_;
   
@@ -1148,6 +1170,27 @@ sub save_pricegroup {
     $query = qq|INSERT INTO pricegroup
                 (pricegroup)
                 VALUES (|.$dbh->quote($form->{pricegroup}).qq|)|;
+  }
+  $dbh->do($query) || $form->dberror($query);
+  
+  $dbh->disconnect;
+
+}
+
+
+sub save_site {
+  my ($self, $myconfig, $form) = @_;
+  
+  my $dbh = $form->dbconnect($myconfig);
+  
+  if ($form->{id} *= 1) {
+    $query = qq|UPDATE site SET
+                site = |.$dbh->quote($form->{site}).qq|
+		WHERE id = $form->{id}|;
+  } else {
+    $query = qq|INSERT INTO site
+                (site)
+                VALUES (|.$dbh->quote($form->{site}).qq|)|;
   }
   $dbh->do($query) || $form->dberror($query);
   

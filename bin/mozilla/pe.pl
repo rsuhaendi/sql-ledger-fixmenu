@@ -77,6 +77,7 @@ sub edit {
 
 sub prepare_partsgroup { PE->get_partsgroup(\%myconfig, \%$form) if $form->{id} }
 sub prepare_pricegroup { PE->get_pricegroup(\%myconfig, \%$form) if $form->{id} }
+sub prepare_site { PE->get_site(\%myconfig, \%$form) if $form->{id} }
 
 sub prepare_job {
   
@@ -1246,6 +1247,12 @@ sub save {
     PE->save_pricegroup(\%myconfig, \%$form);
     $form->redirect($locale->text('Pricegroup saved!'));
   }
+
+  if ($form->{type} eq 'site') {
+    $form->isblank("site", $locale->text('Site missing!'));
+    PE->save_site(\%myconfig, \%$form);
+    $form->redirect($locale->text('Site saved!'));
+  }
   
 
   if ($form->{type} eq 'job') {
@@ -1652,6 +1659,74 @@ sub pricegroup_report {
 
   print qq|
   </form>
+
+</body>
+</html>
+|;
+
+}
+
+
+sub site_header {
+
+  $form->{title} = $locale->text(ucfirst $form->{action}." Site");
+
+# $locale->text('Add Site')
+# $locale->text('Edit Site')
+# $locale->text('Nama Site')
+
+  $form->{site} = $form->quote($form->{site});
+
+  $form->header;
+
+  print qq|
+<body>
+
+<form method=post action=$form->{script}>
+
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{title}</th>
+  </tr>
+  <tr height="5"></tr>
+  <tr>
+    <td>
+      <table>
+        <tr>
+          <th align=right nowrap>|.$locale->text('Nama Site').qq| <font color=red>*</font></th>
+          <td><input name=site size=40 value="$form->{site}"></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td colspan=2><hr size=3 noshade></td>
+  </tr>
+</table>
+|;
+
+  $form->hide_form(qw(id type));
+
+}
+
+
+sub site_footer {
+
+  $form->hide_form(qw(callback path login));
+
+  if ($myconfig{acs} !~ /Customers--Add Site/) {
+    print qq|
+<input type=submit class=submit name=action value="|.$locale->text('Save').qq|">
+|;
+  }
+
+  if ($form->{menubar}) {
+    require "$form->{path}/menu.pl";
+    &menubar;
+  }
+
+  print qq|
+</form>
 
 </body>
 </html>

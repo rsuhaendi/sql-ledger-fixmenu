@@ -46,9 +46,26 @@ if ($form->{action}) {
 1;
 
 
+# halaman login memakai stylesheet dari Preferences (users/members),
+# supaya tombol mengikuti theme pilihan tanpa mengubah css/sql-ledger.css
+sub preferred_stylesheet {
+  my $css = "sql-ledger.css";
+  if (open(my $fh, "<", $memberfile)) {
+    while (my $line = <$fh>) {
+      if ($line =~ /^stylesheet=(\S+)/) {
+        $css = $1 if -f "css/$1";
+        last;
+      }
+    }
+    close $fh;
+  }
+  return $css;
+}
+
+
 sub login_screen {
 
-  $form->{stylesheet} = "sql-ledger.css";
+  $form->{stylesheet} = &preferred_stylesheet;
   $form->{favicon} = "sql-ledger.ico";
 
   $form->header;
@@ -135,9 +152,7 @@ function jsp() {
 sub selectdataset {
   my ($login) = @_;
   
-  if (-f "css/sql-ledger.css") {
-    $form->{stylesheet} = "sql-ledger.css";
-  }
+  $form->{stylesheet} = &preferred_stylesheet;
   if (-f sql-ledger.ico) {
     $form->{favicon} = "sql-ledger.ico";
   }
@@ -216,7 +231,7 @@ sub selectdataset {
 
 sub login {
 
-  $form->{stylesheet} = "sql-ledger.css";
+  $form->{stylesheet} = &preferred_stylesheet;
   $form->{favicon} = "sql-ledger.ico";
   
   $form->error($locale->text('You did not enter a name!')) unless ($form->{login});

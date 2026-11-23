@@ -111,6 +111,13 @@ sub section_menu {
 
     $label =~ s/.*--//g;
     $label = $locale->text($label);
+
+    # <hr> is a separator, not a hoverable menu item
+    if ($item eq '<hr>') {
+      print qq|<br><hr><br>\n|;
+      next;
+    }
+
     $label =~ s/ /&nbsp;/g if $label !~ /<img /i;
 
     $menu->{$item}{target} = "main_window" unless $menu->{$item}{target};
@@ -176,6 +183,12 @@ sub jsmenu_frame {
     $label =~ s/.*--//g;
     $label = $locale->text($label);
 
+    # <hr> is a separator, not a hoverable menu item
+    if ($item eq '<hr>') {
+      print qq|<hr>\n|;
+      next;
+    }
+
     $menu->{$item}{target} = "main_window" unless $menu->{$item}{target};
 
     if ($menu->{$item}{submenu}) {
@@ -183,8 +196,9 @@ sub jsmenu_frame {
 	$display = "display: none;" unless $level eq ' ';
 
 	print qq|
+        <div class="submenu-group">
         <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu" id="sub$i" style="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display">|;
 	
 	# remove same level items
 	map { shift @menuorder } grep /^$item/, @menuorder;
@@ -193,6 +207,7 @@ sub jsmenu_frame {
 	
 	print qq|
 	</div>
+        </div>
 |;
 
     } else {
@@ -209,7 +224,7 @@ sub jsmenu_frame {
 
 	} else {
 	
-	  print qq|<div class="submenu"> |.
+	  print qq|<div class="submenu submenu-item"> |.
           $menu->menuitem(\%myconfig, \%$form, $item, $level).qq|$label</a></div>|;
 	}
 
@@ -219,7 +234,7 @@ sub jsmenu_frame {
 
 	print qq|
 <div id="menu$i" class="menuOut" onclick="SwitchMenu('sub$i')" onmouseover="ChangeClass('menu$i','menuOver')" onmouseout="ChangeClass('menu$i','menuOut')">$label</div>
-	<div class="submenu" id="sub$i" style="$display">|;
+	<div class="submenu submenu-container" id="sub$i" style="$display">|;
 	
 	&jsmenu_frame($menu, $item);
 	
@@ -247,6 +262,8 @@ sub jsmenu {
     $label = $item;
     $label =~ s/.*--//g;
     $label = $locale->text($label);
+
+    next if $item eq '<hr>';
 
     if ($menu->{$item}{submenu}) {
 

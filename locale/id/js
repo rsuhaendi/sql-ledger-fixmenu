@@ -1,12 +1,29 @@
 $self{texts} = {
+  'Accepted format is'          => 'Format yang diterima adalah',
+  'Allowed range for selected month is' => 'Rentang yang diizinkan untuk bulan terpilih adalah',
+  'Allowed range is'            => 'Rentang yang diizinkan adalah',
+  'April'                       => 'April',
   'August'                      => 'Agustus',
   'December'                    => 'Desember',
   'February'                    => 'Februari',
+  'Fr'                          => 'Jum',
+  'Invalid date:'               => 'Tanggal tidak valid:',
+  'Invalid day:'                => 'Hari tidak valid:',
+  'Invalid month:'              => 'Bulan tidak valid:',
   'January'                     => 'Januari',
   'July'                        => 'Juli',
   'June'                        => 'Juni',
   'March'                       => 'Maret',
+  'May'                         => 'Mei',
+  'Mo'                          => 'Sen',
+  'November'                    => 'November',
   'October'                     => 'Oktober',
+  'Sa'                          => 'Sab',
+  'September'                   => 'September',
+  'Su'                          => 'Min',
+  'Th'                          => 'Kam',
+  'Tu'                          => 'Sel',
+  'We'                          => 'Rab',
 };
 
 $self{subs} = {
@@ -21,4 +38,3 @@ $self{subs} = {
 };
 
 1;
-

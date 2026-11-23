@@ -445,7 +445,8 @@ sub header {
   if ($ENV{HTTP_USER_AGENT}) {
 
     if ($self->{stylesheet} && (-f "css/$self->{stylesheet}")) {
-      $stylesheet = qq|<LINK REL="stylesheet" HREF="css/$self->{stylesheet}" TYPE="text/css" TITLE="SQL-Ledger stylesheet">
+      my $cssversion = (stat("css/$self->{stylesheet}"))[9] || 0;
+      $stylesheet = qq|<LINK REL="stylesheet" HREF="css/$self->{stylesheet}?v=$cssversion" TYPE="text/css" TITLE="SQL-Ledger stylesheet">
   |;
     }
 

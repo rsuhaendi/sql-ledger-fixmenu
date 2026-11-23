@@ -119,9 +119,11 @@ function FilterMenu(value) {
   for (i = 0; i < topHeaders.length; i++) {
     var hdr = topHeaders[i];
     var onclick = hdr.getAttribute('onclick') \|\| '';
-    var m = onclick.match(/SwitchMenu\('(sub\d+)'\)/);
-    if (!m) { continue; }
-    var cont = document.getElementById(m[1]);
+    var m = onclick.indexOf("SwitchMenu('sub");
+    if (m === -1) { continue; }
+    var id = onclick.substring(m + 12);
+    id = id.substring(0, id.indexOf("'"));
+    var cont = document.getElementById(id);
     if (!cont) { continue; }
     var any2 = false;
     var citems = cont.getElementsByClassName('submenu-item');

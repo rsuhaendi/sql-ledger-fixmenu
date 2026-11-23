@@ -184,6 +184,23 @@ function FilterMenu(value) {
     }
   }
 }
+
+function CollapseAllMenus() {
+  var cts = document.getElementsByClassName('submenu-container');
+  for (var i = 0; i < cts.length; i++) {
+    cts[i].setAttribute('data-display', 'display: none;');
+  }
+  var groups = document.getElementsByClassName('submenu-group');
+  for (i = 0; i < groups.length; i++) {
+    var h = groups[i].querySelector('.menuOver');
+    if (h) { h.className = 'menuOut'; }
+  }
+  var top = document.querySelectorAll('body > .menuOver');
+  for (i = 0; i < top.length; i++) { top[i].className = 'menuOut'; }
+  var search = document.getElementById('menu-search');
+  if (search) { search.value = ''; }
+  FilterMenu('');
+}
 document.onselectstart = new Function("return false");
 </script>
 
@@ -192,7 +209,7 @@ document.onselectstart = new Function("return false");
 <img src=$images/sql-ledger.gif width=80 border=0>
 
 <br>$myconfig{name}
-<br><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
+<br><input type="button" id="menu-collapse" class="menu-collapse" value="&minus;" title="Tutup semua menu" onclick="CollapseAllMenus()"><input type="text" id="menu-search" class="menu-search" placeholder="Search..." onkeyup="FilterMenu(this.value)">
 |;
 
   if ($form->{js}) {

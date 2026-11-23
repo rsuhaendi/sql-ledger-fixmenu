@@ -221,6 +221,23 @@ body.menu {
   color: #000000;
 }
 
+#menu-collapse {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: 4px 4px 8px 0;
+  padding: 0;
+  border: 1px solid #999999;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: #666666;
+  font-size: 12px;
+  line-height: 14px;
+  text-align: center;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
 body.menu > hr:first-of-type {
   width: 120px;
   margin: 0 0 8px 0;

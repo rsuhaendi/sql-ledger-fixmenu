@@ -101,6 +101,12 @@ sub create_links {
     for (@{ $form->{all_pricegroup} }) { $form->{selectpricegroup} .= qq|$_->{pricegroup}--$_->{id}\n| }
     $form->{selectpricegroup} = $form->escape($form->{selectpricegroup},1);
   }
+
+  if (@{ $form->{all_site} } && $form->{db} eq 'customer') {
+    $form->{selectsite} = qq|\n|;
+    for (@{ $form->{all_site} }) { $form->{selectsite} .= qq|$_->{site}\n| }
+    $form->{selectsite} = $form->escape($form->{selectsite},1);
+  }
   
   if (@{ $form->{all_language} }) {
     $form->{selectlanguage} = qq|\n|;
@@ -2119,7 +2125,9 @@ sub form_header {
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Site').qq|</th>
-		<td><input name=site size=35 value="$form->{site}"></td>
+		<td><select name=site>|
+		.$form->select_option($form->{selectsite}, $form->{site})
+		.qq|</select></td>
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Titik Koordinat').qq|</th>
@@ -2308,7 +2316,7 @@ sub form_header {
 
 
   $form->hide_form(map { "tax_${_}_description" } (split / /, $form->{taxaccounts})) if $form->{taxaccounts};
-  $form->hide_form(map { "select$_" } qw(currency arap discount payment business pricegroup language employee paymentmethod));
+  $form->hide_form(map { "select$_" } qw(currency arap discount payment business pricegroup site language employee paymentmethod));
   $form->hide_form(map { "shipto$_" } qw(name address1 address2 city state zipcode country contact phone fax email));
 
 }

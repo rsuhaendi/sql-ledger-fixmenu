@@ -212,6 +212,20 @@ sub create_links {
   }
   $sth->finish;
 
+  # get sites for customer dropdown
+  if ($form->{db} eq 'customer') {
+    $query = qq|SELECT site
+                FROM site
+		ORDER BY site|;
+    $sth = $dbh->prepare($query);
+    $sth->execute || $form->dberror($query);
+
+    while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
+      push @{ $form->{all_site} }, $ref;
+    }
+    $sth->finish;
+  }
+
   # get paymentmethod
   $query = qq|SELECT *
               FROM paymentmethod

@@ -15,3 +15,4 @@ ALTER TABLE customer ADD COLUMN IF NOT EXISTS pppoe_password varchar(64);
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS bandwidth varchar(32);
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS registration_fee varchar(32);
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS monthly_fee varchar(32);
+ALTER TABLE customer ADD COLUMN IF NOT EXISTS billing_type varchar(16);

@@ -455,7 +455,7 @@ sub save {
   if ($form->{db} eq 'customer') {
     for my $f (qw(site coordinate odp_location pon cable_length signal_dbm
                   device_type ip_address pppoe_username pppoe_password
-                  bandwidth registration_fee monthly_fee)) {
+                  bandwidth registration_fee monthly_fee billing_type)) {
       $network_fields .= "              $f = ".$dbh->quote($form->{$f}).qq|,\n|;
     }
   }

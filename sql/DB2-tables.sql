@@ -164,7 +164,8 @@ CREATE TABLE customer (
   pppoe_password VARCHAR(64),
   bandwidth VARCHAR(32),
   registration_fee VARCHAR(32),
-  monthly_fee VARCHAR(32)
+  monthly_fee VARCHAR(32),
+  billing_type VARCHAR(16)
 ) IN LEDGER_TS
 @
 ---------------------------------------------------------

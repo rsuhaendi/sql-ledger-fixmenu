@@ -1763,6 +1763,16 @@ sub form_header {
  
   }
   
+  my $prepaid_checked = (!$form->{billing_type} || $form->{billing_type} eq 'Prabayar') ? ' checked' : '';
+  my $postpaid_checked = ($form->{billing_type} eq 'Pascabayar') ? ' checked' : '';
+  $billingtype = qq|
+        <tr>
+	  <th align=right>|.$locale->text('Jenis Pembayaran').qq|</th>
+	  <td><input type=radio name=billing_type value=Prabayar$prepaid_checked> Prabayar
+	      &nbsp;<input type=radio name=billing_type value=Pascabayar$postpaid_checked> Pascabayar</td>
+	</tr>
+|;
+
   $discountaccount = qq|
         <tr>
 	  <th align=right>|.$locale->text('Terms').qq|</th>
@@ -2148,6 +2158,7 @@ sub form_header {
 	    <table>
 	      $arapaccount
 	      $paymentaccount
+	      $billingtype
 	      $discountaccount
 	    </table>
 	  </td>

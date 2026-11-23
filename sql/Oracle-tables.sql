@@ -142,7 +142,8 @@ CREATE TABLE customer (
   pppoe_password VARCHAR2(64),
   bandwidth VARCHAR2(32),
   registration_fee VARCHAR2(32),
-  monthly_fee VARCHAR2(32)
+  monthly_fee VARCHAR2(32),
+  billing_type VARCHAR2(16)
 );
 --
 CREATE TABLE parts (

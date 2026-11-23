@@ -138,6 +138,7 @@ CREATE TABLE customer (
   bandwidth varchar(32),
   registration_fee varchar(32),
   monthly_fee varchar(32),
+  billing_type varchar(16),
   business_id int,
   taxnumber varchar(32),
   sic_code varchar(6),

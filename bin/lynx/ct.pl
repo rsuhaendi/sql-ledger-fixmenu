@@ -2086,7 +2086,7 @@ sub form_header {
 		<td><input name=site size=35 value="$form->{site}"></td>
 	      </tr>
 	      <tr>
-		<th align=right nowrap>|.$locale->text('Titik Kordinat').qq|</th>
+		<th align=right nowrap>|.$locale->text('Titik Koordinat').qq|</th>
 		<td><input name=coordinate size=35 value="$form->{coordinate}"></td>
 	      </tr>
 	      <tr>
@@ -2119,7 +2119,7 @@ sub form_header {
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('PPPoE password').qq|</th>
-		<td><input type=password name=pppoe_password size=35 value="$form->{pppoe_password}"></td>
+		<td><input name=pppoe_password size=35 value="$form->{pppoe_password}"></td>
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Bandwidth (Mbps)').qq|</th>

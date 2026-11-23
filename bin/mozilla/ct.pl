@@ -409,7 +409,7 @@ sub include_in_report {
   push @f, qq|<input name="l_address" type=checkbox class=checkbox value=Y> |.$locale->text('Address');
   push @f, qq|<input name="l_salutation" type=checkbox class=checkbox value=Y $form->{l_salutation}> |.$locale->text('Salutation');
   push @f, qq|<input name="l_contact" type=checkbox class=checkbox value=Y $form->{l_contact}> |.$locale->text('Contact');
-  push @f, qq|<input name="l_contacttitle" type=checkbox class=checkbox value=Y $form->{l_contacttitle}> |.$locale->text('Title');
+  push @f, qq|<input name="l_contacttitle" type=checkbox class=checkbox value=Y $form->{l_contacttitle}> |.$locale->text('No. KTP');
   push @f, qq|<input name="l_gender" type=checkbox class=checkbox value=Y $form->{l_gender}> |.$locale->text('Gender');
   push @f, qq|<input name="l_occupation" type=checkbox class=checkbox value=Y $form->{l_occupation}> |.$locale->text('Occupation');
   push @f, qq|<input name="l_email" type=checkbox class=checkbox value=Y $form->{l_email}> |.$locale->text('E-mail');
@@ -668,6 +668,10 @@ sub search_name {
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Notes').qq|</th>
 		<td colspan=3><textarea name=notes rows=3 cols=32></textarea></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('No. KTP').qq|</th>
+		<td colspan=3><input name=contacttitle size=32></td>
 	      </tr>
 		$employee
                 $typeofbusiness
@@ -928,6 +932,11 @@ sub list_names {
     $href .= "&notes=".$form->escape($form->{notes});
     $option .= "\n<br>".$locale->text('Notes')." : $form->{notes}";
   }
+  if ($form->{contacttitle}) {
+    $callback .= "&contacttitle=".$form->escape($form->{contacttitle},1);
+    $href .= "&contacttitle=".$form->escape($form->{contacttitle});
+    $option .= "\n<br>".$locale->text('No. KTP')." : $form->{contacttitle}";
+  }
   if ($form->{"$form->{db}number"}) {
     $callback .= qq|&$form->{db}number=|.$form->escape($form->{"$form->{db}number"},1);
     $href .= "&$form->{db}number=".$form->escape($form->{"$form->{db}number"});
@@ -1014,7 +1023,7 @@ sub list_names {
   $column_header{salutation} = qq|<th>|.$locale->text('Salutation').qq|</th>|;
   $column_header{firstname} = qq|<th><a class=listheading href=$href&sort=contact>|.$locale->text('Contact').qq|</a></th>|;
   $column_header{lastname} = qq|<th>&nbsp;</th>|;
-  $column_header{contacttitle} = qq|<th>|.$locale->text('Title').qq|</th>|;
+  $column_header{contacttitle} = qq|<th>|.$locale->text('No. KTP').qq|</th>|;
   $column_header{gender} = qq|<th>|.$locale->text('G').qq|</th>|;
   $column_header{occupation} = qq|<th><a class=listheading href=$href&sort=occupation>|.$locale->text('Occupation').qq|</a></th>|;
   $column_header{phone} = qq|<th><a class=listheading href=$href&sort=phone>|.$locale->text('Phone').qq|</a></th>|;
@@ -2142,6 +2151,10 @@ sub form_header {
 		<td><select name=site>|
 		.$form->select_option($form->{selectsite}, $form->{site})
 		.qq|</select></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('No. KTP').qq|</th>
+		<td><input name=contacttitle size=35 maxlength=32 value="|.$form->quote($form->{contacttitle}).qq|"></td>
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Titik Koordinat').qq|</th>

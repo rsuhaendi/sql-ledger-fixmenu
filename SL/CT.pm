@@ -687,6 +687,11 @@ sub search {
     }
   }
 
+  if ($form->{contacttitle} ne "") {
+    $var = $form->like(lc $form->{contacttitle});
+    $where .= " AND lower(ct.contacttitle) LIKE '$var'";
+  }
+
   @sf = qw(city state zipcode);
   foreach $item (@sf) {
     if ($form->{$item} ne "") {

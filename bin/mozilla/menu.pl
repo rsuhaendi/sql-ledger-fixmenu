@@ -100,6 +100,9 @@ function FilterMenu(value) {
       var container = groups[i].querySelector('.submenu-container');
       var header = groups[i].querySelector('.menuOut, .menuOver');
       var any = false;
+      var htxt = '';
+      if (header) { htxt = (header.textContent \|\| header.innerText).toLowerCase(); }
+      var headerMatch = term && htxt.indexOf(term) !== -1;
       if (container) {
         var children = container.getElementsByClassName('submenu-item');
         for (j = 0; j < children.length; j++) {
@@ -108,6 +111,13 @@ function FilterMenu(value) {
         var subgroups = container.children;
         for (j = 0; j < subgroups.length; j++) {
           if (subgroups[j].className && subgroups[j].className.indexOf('submenu-group') !== -1 && subgroups[j].style.display !== 'none') { any = true; }
+        }
+        if (headerMatch) {
+          any = true;
+          for (j = 0; j < children.length; j++) { children[j].style.display = ''; }
+          for (j = 0; j < subgroups.length; j++) {
+            if (subgroups[j].className && subgroups[j].className.indexOf('submenu-group') !== -1) { subgroups[j].style.display = ''; }
+          }
         }
       }
       groups[i].style.display = (!term \|\| any) ? '' : 'none';

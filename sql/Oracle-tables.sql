@@ -129,7 +129,20 @@ CREATE TABLE customer (
   terms INTEGER DEFAULT 0,
   customernumber VARCHAR2(40),
   cc VARCHAR2(50),
-  bcc VARCHAR2(50)
+  bcc VARCHAR2(50),
+  site VARCHAR2(2000),
+  coordinate VARCHAR2(100),
+  odp_location VARCHAR2(2000),
+  pon VARCHAR2(64),
+  cable_length VARCHAR2(32),
+  signal_dbm VARCHAR2(32),
+  device_type VARCHAR2(64),
+  ip_address VARCHAR2(64),
+  pppoe_username VARCHAR2(64),
+  pppoe_password VARCHAR2(64),
+  bandwidth VARCHAR2(32),
+  registration_fee VARCHAR2(32),
+  monthly_fee VARCHAR2(32)
 );
 --
 CREATE TABLE parts (

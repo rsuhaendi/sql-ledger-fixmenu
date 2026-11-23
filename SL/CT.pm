@@ -451,6 +451,15 @@ sub save {
   $gifi = qq|
 	      gifi_accno = '$form->{gifi_accno}',| if $form->{db} eq 'vendor';
 
+  my $network_fields = '';
+  if ($form->{db} eq 'customer') {
+    for my $f (qw(site coordinate odp_location pon cable_length signal_dbm
+                  device_type ip_address pppoe_username pppoe_password
+                  bandwidth registration_fee monthly_fee)) {
+      $network_fields .= "              $f = ".$dbh->quote($form->{$f}).qq|,\n|;
+    }
+  }
+
   $query = qq|UPDATE $form->{db} SET
               $form->{db}number = |.$dbh->quote($form->{"$form->{db}number"}).qq|,
 	      name = |.$dbh->quote($form->{name}).qq|,
@@ -460,7 +469,7 @@ sub save {
 	      email = '$form->{email}',
 	      cc = '$form->{cc}',
 	      bcc = '$form->{bcc}',
-	      notes = |.$dbh->quote($form->{notes}).qq|,
+$network_fields	      notes = |.$dbh->quote($form->{notes}).qq|,
 	      terms = $form->{terms},
 	      discount = $form->{discount},
 	      creditlimit = $form->{creditlimit},

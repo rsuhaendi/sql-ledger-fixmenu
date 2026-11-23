@@ -151,7 +151,20 @@ CREATE TABLE customer (
   terms INTEGER WITH DEFAULT,                          
   customernumber VARCHAR(40),                           
   cc VARCHAR(50),                                       
-  bcc VARCHAR(50)                                       
+  bcc VARCHAR(50),
+  site VARCHAR(2000),
+  coordinate VARCHAR(100),
+  odp_location VARCHAR(2000),
+  pon VARCHAR(64),
+  cable_length VARCHAR(32),
+  signal_dbm VARCHAR(32),
+  device_type VARCHAR(64),
+  ip_address VARCHAR(64),
+  pppoe_username VARCHAR(64),
+  pppoe_password VARCHAR(64),
+  bandwidth VARCHAR(32),
+  registration_fee VARCHAR(32),
+  monthly_fee VARCHAR(32)
 ) IN LEDGER_TS
 @
 ---------------------------------------------------------

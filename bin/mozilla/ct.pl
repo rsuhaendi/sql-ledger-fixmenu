@@ -2085,6 +2085,58 @@ sub form_header {
 		<th align=right nowrap>|.$locale->text('Bcc').qq|</th>
 		<td><input name=bcc size=35 value="$form->{bcc}"></td>
 	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Site').qq|</th>
+		<td><input name=site size=35 value="$form->{site}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Titik Kordinat').qq|</th>
+		<td><input name=coordinate size=35 value="$form->{coordinate}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Lokasi ODP').qq|</th>
+		<td><input name=odp_location size=35 value="$form->{odp_location}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('PON').qq|</th>
+		<td><input name=pon size=20 value="$form->{pon}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Panjang Kabel').qq|</th>
+		<td><input name=cable_length size=20 value="$form->{cable_length}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Sinyal Redaman (dBm)').qq|</th>
+		<td><input name=signal_dbm size=20 value="$form->{signal_dbm}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Jenis Perangkat').qq|</th>
+		<td><input name=device_type size=35 value="$form->{device_type}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('IP address').qq|</th>
+		<td><input name=ip_address size=35 value="$form->{ip_address}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('PPPoE username').qq|</th>
+		<td><input name=pppoe_username size=35 value="$form->{pppoe_username}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('PPPoE password').qq|</th>
+		<td><input type=password name=pppoe_password size=35 value="$form->{pppoe_password}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Bandwidth (Mbps)').qq|</th>
+		<td><input name=bandwidth size=20 value="$form->{bandwidth}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Biaya Registrasi').qq|</th>
+		<td><input name=registration_fee size=20 value="$form->{registration_fee}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Biaya Bulanan').qq|</th>
+		<td><input name=monthly_fee size=20 value="$form->{monthly_fee}"></td>
+	      </tr>
 	    </table>
 	  </td>
 	</tr>

@@ -144,6 +144,8 @@ function FilterMenu(value) {
     var cont = document.getElementById(id);
     if (!cont) { continue; }
     var any2 = false;
+    var htxt2 = (hdr.textContent \|\| hdr.innerText).toLowerCase();
+    var headerMatch2 = term && htxt2.indexOf(term) !== -1;
     var citems = cont.getElementsByClassName('submenu-item');
     for (j = 0; j < citems.length; j++) {
       if (citems[j].style.display !== 'none') { any2 = true; }
@@ -151,6 +153,11 @@ function FilterMenu(value) {
     var cgroups = cont.querySelectorAll('.submenu-group');
     for (j = 0; j < cgroups.length; j++) {
       if (cgroups[j].style.display !== 'none') { any2 = true; }
+    }
+    if (headerMatch2) {
+      any2 = true;
+      for (j = 0; j < citems.length; j++) { citems[j].style.display = ''; }
+      for (j = 0; j < cgroups.length; j++) { cgroups[j].style.display = ''; var gh = cgroups[j].querySelector('.menuOut, .menuOver'); if (gh) gh.style.display = ''; }
     }
     hdr.style.display = (!term \|\| any2) ? '' : 'none';
     cont.style.display = term ? (any2 ? 'block' : 'none') : (cont.getAttribute('data-display') \|\| 'none');

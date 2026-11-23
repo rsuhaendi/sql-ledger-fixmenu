@@ -259,15 +259,23 @@ body.menu {
   height: 20px;
   margin: 0 2px 0 0;
   padding: 0;
-  border: 1px solid #999999;
+  border: 0;
+  outline: none;
+  box-shadow: none;
   border-radius: 50%;
-  background-color: #ffffff;
+  background-color: #FBFFE7;
   color: #666666;
   font-size: 13px;
   line-height: 18px;
   text-align: center;
   cursor: pointer;
   vertical-align: middle;
+}
+
+#menu-collapse:hover,
+#menu-collapse:focus {
+  background-color: #d6d6d6;
+  color: #000000;
 }
 
 body.menu > hr:first-of-type {

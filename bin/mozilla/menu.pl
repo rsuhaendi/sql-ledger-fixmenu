@@ -163,9 +163,14 @@ function FilterMenu(value) {
     cont.style.display = term ? (any2 ? 'block' : 'none') : (cont.getAttribute('data-display') \|\| 'none');
   }
   if (!term) {
+    var allItems = document.getElementsByClassName('submenu-item');
+    for (i = 0; i < allItems.length; i++) {
+      allItems[i].style.display = '';
+    }
     var cts = document.getElementsByClassName('submenu-container');
     for (i = 0; i < cts.length; i++) {
-      cts[i].style.display = cts[i].getAttribute('data-display') \|\| 'none';
+      var dd = cts[i].getAttribute('data-display') \|\| '';
+      cts[i].style.display = (dd.indexOf('block') !== -1) ? 'block' : 'none';
     }
     var allGroups = document.getElementsByClassName('submenu-group');
     for (i = 0; i < allGroups.length; i++) {

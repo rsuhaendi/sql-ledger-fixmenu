@@ -1265,12 +1265,12 @@ sub save_memberfile {
       }
       
     } else {
-      for (qw(company dateformat dbconnect dbdriver dbname dbhost dboptions dbpasswd dbuser numberformat)) { $m{$_} = $myconfig{$_} }
+      for (qw(company dateformat dbconnect dbdriver dbname dbhost dboptions dbpasswd dbuser numberformat charset outputformat vclimit)) { $m{$_} = $myconfig{$_} }
       for (qw(name email tan templates)) { $m{$_} = $form->{$_} }
 
       $m{dbpasswd} = pack 'u', $myconfig{dbpasswd};
       chop $m{dbpasswd};
-      $m{stylesheet} = 'sql-ledger.css';
+      $m{stylesheet} = $myconfig{stylesheet} || 'sql-ledger-buttons.css';
       $m{timeout} = 86400;
 
       if ($form->{employeepassword}) {

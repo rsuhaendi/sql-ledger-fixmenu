@@ -25,7 +25,7 @@ $form->{charset} = $charset;
 eval { require DBI; };
 $form->error($locale->text('DBI not installed!')) if ($@);
 
-$form->{stylesheet} = "sql-ledger.css";
+$form->{stylesheet} = "sql-ledger-buttons.css";
 $form->{favicon} = "favicon.ico";
 $form->{timeout} = 86400;
 $form->{"root login"} = 1;
@@ -1298,7 +1298,7 @@ sub dbcreate {
   $form->{charset} = $form->{encoding};
   $form->{dbname} = $form->{db};
   $form->{login} = "admin\@$form->{db}";
-  $form->{stylesheet} = "sql-ledger.css";
+  $form->{stylesheet} = "sql-ledger-buttons.css";
   $form->{dateformat} = "mm-dd-yy";
   $form->{numberformat} = "1,000.00";
   $form->{dboptions} = "set DateStyle to 'POSTGRES, US'";

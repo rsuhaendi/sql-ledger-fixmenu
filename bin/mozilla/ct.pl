@@ -416,6 +416,7 @@ sub include_in_report {
   push @f, qq|<input name="l_cc" type=checkbox class=checkbox value=Y> |.$locale->text('Cc');
   push @f, qq|<input name="l_bcc" type=checkbox class=checkbox value=Y> |.$locale->text('Bcc');
   push @f, qq|<input name="l_site" type=checkbox class=checkbox value=Y $form->{l_site}> |.$locale->text('Site') if $form->{db} eq 'customer';
+  push @f, qq|<input name="l_billing_type" type=checkbox class=checkbox value=Y $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran') if $form->{db} eq 'customer';
   push @f, qq|<input name="l_city" type=checkbox class=checkbox value=Y> |.$locale->text('City');
   push @f, qq|<input name="l_state" type=checkbox class=checkbox value=Y> |.$locale->text('State/Province');
   push @f, qq|<input name="l_zipcode" type=checkbox class=checkbox value=Y> |.$locale->text('Zip/Postal Code');
@@ -497,6 +498,7 @@ sub search {
 
   for (qw(name contact phone email)) { $form->{"l_$_"} = 'checked' }
   $form->{l_site} = 'checked' if $form->{db} eq 'customer';
+  $form->{l_billing_type} = 'checked' if $form->{db} eq 'customer';
 
   $form->{nextsub} = "list_names";
 
@@ -781,6 +783,7 @@ sub list_names {
              phone, fax, email, cc, bcc, employee,
 	     notes, discount, terms, creditlimit, outstanding, availablecredit);
   push @columns, 'site' if $form->{db} eq 'customer';
+  push @columns, 'billing_type' if $form->{db} eq 'customer';
   
   if ($form->{l_accounts}) {
     for (arap_accno, payment_accno, discount_accno, taxaccounts) {
@@ -1032,6 +1035,7 @@ sub list_names {
   $column_header{cc} = qq|<th><a class=listheading href=$href&sort=cc>|.$locale->text('Cc').qq|</a></th>|;
   $column_header{bcc} = qq|<th><a class=listheading href=$href&sort=bcc>|.$locale->text('Bcc').qq|</a></th>|;
   $column_header{site} = qq|<th><a class=listheading href=$href&sort=site>|.$locale->text('Site').qq|</a></th>|;
+  $column_header{billing_type} = qq|<th><a class=listheading href=$href&sort=billing_type>|.$locale->text('Jenis Pembayaran').qq|</a></th>|;
   $column_header{notes} = qq|<th><a class=listheading href=$href&sort=notes>|.$locale->text('Notes').qq|</a></th>|;
   $column_header{discount} = qq|<th class=listheading>%</th>|;
   $column_header{terms} = qq|<th class=listheading>|.$locale->text('Terms').qq|</th>|;

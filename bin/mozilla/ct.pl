@@ -2035,6 +2035,7 @@ sub form_header {
 
   $employeelabel = $locale->text('Salesperson');
   $employeeclass = ' class=salesperson-label';
+  $startdateclass = ($form->{db} eq 'customer') ? ' class=startdate-label' : '';
  
   if ($form->{db} eq 'vendor') {
     $gifi = qq|
@@ -2352,7 +2353,7 @@ sub form_header {
       <table>
 	<tr>
 	  $currency
-	  <th align=right>|.$locale->text('Startdate').qq|</th>
+	  <th align=right$startdateclass>|.$locale->text('Startdate').qq|</th>
 	  <td nowrap><input name=startdate size=11 class=date title="$myconfig{dateformat}" value=$form->{startdate}>|.&js_calendar("main", "startdate").qq|</td>
 	</tr>
 	<tr>

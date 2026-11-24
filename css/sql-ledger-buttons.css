@@ -210,7 +210,8 @@ body.menu {
 
 .isp-select-all,
 .salesperson-label,
-.billing-type-label {
+.billing-type-label,
+.startdate-label {
   color: #6a1b9a;
 }
 

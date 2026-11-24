@@ -3767,6 +3767,7 @@ sub ex_chart {
     $i++;
     $form->{"ndx_$i"} = $ref->{id};
     $form->{"accno_$i"} = $ref->{accno};
+    $form->{"account_heading_$i"} = $ref->{account_heading};
     $form->{"description_$i"} = $ref->{description};
     $form->{"category_$i"} = $ref->{category};
   }
@@ -3800,10 +3801,11 @@ print qq|
   </tr>
   <tr>
     <td>
-      <table class=listwidth width=100%>
+      <table width=100%>
         <tr class=listheading>
-          <th class=listheading></th>
+          <th class=listheading>|.$locale->text('Type').qq|</th>
           <th class=listheading>|.$locale->text('Account').qq|</th>
+          <th class=listheading>|.$locale->text('Account Heading').qq|</th>
           <th class=listheading>|.$locale->text('Description').qq|</th>
           <th class=listheading>|.$locale->text('Category').qq|</th>
         </tr>
@@ -3816,6 +3818,7 @@ print qq|
     print qq|<tr class=listrow$odd>|;
     print qq|<td nowrap><input name="ndx_$j" type=checkbox class=checkbox value="$ref->{id}" checked></td>|;
     print qq|<td nowrap>$ref->{accno}</td>|;
+    print qq|<td nowrap>$ref->{account_heading}</td>|;
     print qq|<td>$ref->{description}</td>|;
     print qq|<td nowrap>$ref->{category}</td>|;
     print qq|</tr>|;

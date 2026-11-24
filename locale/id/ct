@@ -83,6 +83,7 @@ $self{texts} = {
   'Payment'                     => 'Pembayaran',
   'Period'                      => 'Perioda',
   'Phone'                       => 'Telephone',
+  'Pilih semua'                 => 'Pilih semua',
   'Pricegroup'                  => 'Kelompok Harga',
   'Pricelist'                   => 'Daftar Harga',
   'Project Number'              => 'Nomor Proyek',

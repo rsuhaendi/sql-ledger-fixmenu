@@ -414,24 +414,6 @@ sub include_in_report {
   push @f, qq|<input name="l_email" type=checkbox class=checkbox value=Y $form->{l_email}> |.$locale->text('E-mail');
   push @f, qq|<input name="l_cc" type=checkbox class=checkbox value=Y> |.$locale->text('Cc');
   push @f, qq|<input name="l_bcc" type=checkbox class=checkbox value=Y> |.$locale->text('Bcc');
-  if ($form->{db} eq 'customer') {
-    push @f, qq|<b>Data ISP</b> <input type=checkbox class=checkbox name=l_isp_all value=Y onclick="CheckISP(this.checked)"> <span class=small>|.$locale->text('Pilih semua').qq|</span>|;
-    push @f, qq|<input name="l_billing_type" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran');
-    push @f, qq|<input name="l_site" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_site}> |.$locale->text('Site');
-    push @f, qq|<input name="l_ktp" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_ktp}> |.$locale->text('No. KTP');
-    push @f, qq|<input name="l_coordinate" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Titik Koordinat');
-    push @f, qq|<input name="l_odp_location" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Lokasi ODP');
-    push @f, qq|<input name="l_pon" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PON');
-    push @f, qq|<input name="l_cable_length" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Panjang Kabel');
-    push @f, qq|<input name="l_signal_dbm" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Sinyal Redaman (dBm)');
-    push @f, qq|<input name="l_device_type" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Jenis Perangkat');
-    push @f, qq|<input name="l_ip_address" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('IP address');
-    push @f, qq|<input name="l_pppoe_username" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE username');
-    push @f, qq|<input name="l_pppoe_password" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE password');
-    push @f, qq|<input name="l_bandwidth" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Bandwidth (Mbps)');
-    push @f, qq|<input name="l_registration_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Registrasi');
-    push @f, qq|<input name="l_monthly_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Bulanan');
-  }
   push @f, qq|<input name="l_city" type=checkbox class=checkbox value=Y> |.$locale->text('City');
   push @f, qq|<input name="l_state" type=checkbox class=checkbox value=Y> |.$locale->text('State/Province');
   push @f, qq|<input name="l_zipcode" type=checkbox class=checkbox value=Y> |.$locale->text('Zip/Postal Code');
@@ -446,7 +428,6 @@ sub include_in_report {
   push @f, qq|<input name="l_taxnumber" type=checkbox class=checkbox value=Y> |.$locale->text('Tax Number');
   
   if ($form->{db} eq 'customer') {
-    push @f, qq|<input name="l_employee" type=checkbox class=checkbox value=Y> |.$locale->text('Salesperson');
     push @f, qq|<input name="l_pricegroup" type=checkbox class=checkbox value=Y> |.$locale->text('Pricegroup');
 
   } else {
@@ -477,7 +458,27 @@ sub include_in_report {
   push @f, qq|<input name="l_startdate" type=checkbox class=checkbox value=Y> |.$locale->text('Startdate');
   push @f, qq|<input name="l_enddate" type=checkbox class=checkbox value=Y> |.$locale->text('Enddate');
 
-   
+  my @isp = ();
+  if ($form->{db} eq 'customer') {
+    push @isp, qq|<input type=checkbox class=checkbox name=l_isp_all value=Y onclick="CheckISP(this.checked)"> <span class=small>|.$locale->text('Pilih semua').qq|</span>|;
+    push @isp, qq|<input name="l_billing_type" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran');
+    push @isp, qq|<input name="l_site" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_site}> |.$locale->text('Site');
+    push @isp, qq|<input name="l_ktp" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_ktp}> |.$locale->text('No. KTP');
+    push @isp, qq|<input name="l_coordinate" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Titik Koordinat');
+    push @isp, qq|<input name="l_odp_location" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Lokasi ODP');
+    push @isp, qq|<input name="l_pon" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PON');
+    push @isp, qq|<input name="l_cable_length" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Panjang Kabel');
+    push @isp, qq|<input name="l_signal_dbm" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Sinyal Redaman (dBm)');
+    push @isp, qq|<input name="l_device_type" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Jenis Perangkat');
+    push @isp, qq|<input name="l_ip_address" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('IP address');
+    push @isp, qq|<input name="l_pppoe_username" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE username');
+    push @isp, qq|<input name="l_pppoe_password" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE password');
+    push @isp, qq|<input name="l_bandwidth" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Bandwidth (Mbps)');
+    push @isp, qq|<input name="l_registration_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Registrasi');
+    push @isp, qq|<input name="l_monthly_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Bulanan');
+    push @isp, qq|<input name="l_employee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_employee}> |.$locale->text('Salesperson');
+  }
+
   my $isp_js = '';
   if ($form->{db} eq 'customer') {
     $isp_js = qq~
@@ -534,6 +535,30 @@ if (document.addEventListener) {
 	  </td>
 	</tr>
 |;
+
+  if (@isp) {
+    $include .= qq|
+	<tr>
+	  <th align=right nowrap>|.$locale->text('Data ISP').qq|</th>
+	  <td>
+	    <table>
+|;
+
+    while (@isp) {
+      $include .= qq|<tr>\n|;
+      for (1 .. 5) {
+        $include .= qq|<td nowrap>|. shift @isp;
+        $include .= qq|</td>\n|;
+      }
+      $include .= qq|</tr>\n|;
+    }
+
+    $include .= qq|
+	    </table>
+	  </td>
+	</tr>
+|;
+  }
 
 }
 
@@ -840,7 +865,7 @@ sub list_names {
   if ($form->{l_isp_all} eq 'Y') {
     for (qw(billing_type site ktp coordinate odp_location pon cable_length
             signal_dbm device_type ip_address pppoe_username pppoe_password
-            bandwidth registration_fee monthly_fee)) {
+            bandwidth registration_fee monthly_fee employee)) {
       $form->{"l_$_"} = 'Y';
     }
   }

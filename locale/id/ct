@@ -38,6 +38,7 @@ $self{texts} = {
   'Delivery Date'               => 'Tanggal Kirim',
   'Description'                 => 'Keterangan',
   'Detail'                      => 'Detil',
+  'Data ISP'                    => 'Data ISP',
   'Discount'                    => 'Diskon',
   'Edit Customer'               => 'Edit Pelanggan',
   'Edit Vendor'                 => 'Edit Supplier',

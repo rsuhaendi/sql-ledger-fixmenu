@@ -66,7 +66,7 @@ sub create_links {
     $form->{typeofcontact} = $form->{all_contact}->[0]->{typeofcontact};
   }
   $form->{typeofcontact} ||= ($form->{db} eq 'customer') ? "person" : "company";
-  for (qw(email phone fax mobile salutation firstname lastname gender contacttitle occupation)) { $form->{$_} = $form->{all_contact}->[0]->{$_} }
+  for (qw(email phone fax mobile salutation firstname lastname gender contacttitle ktp occupation)) { $form->{$_} = $form->{all_contact}->[0]->{$_} }
   $form->{gender} ||= 'M';
   
   if ($form->{currencies}) {
@@ -409,7 +409,6 @@ sub include_in_report {
   push @f, qq|<input name="l_address" type=checkbox class=checkbox value=Y> |.$locale->text('Address');
   push @f, qq|<input name="l_salutation" type=checkbox class=checkbox value=Y $form->{l_salutation}> |.$locale->text('Salutation');
   push @f, qq|<input name="l_contact" type=checkbox class=checkbox value=Y $form->{l_contact}> |.$locale->text('Contact');
-  push @f, qq|<input name="l_contacttitle" type=checkbox class=checkbox value=Y $form->{l_contacttitle}> |.$locale->text('No. KTP');
   push @f, qq|<input name="l_gender" type=checkbox class=checkbox value=Y $form->{l_gender}> |.$locale->text('Gender');
   push @f, qq|<input name="l_occupation" type=checkbox class=checkbox value=Y $form->{l_occupation}> |.$locale->text('Occupation');
   push @f, qq|<input name="l_email" type=checkbox class=checkbox value=Y $form->{l_email}> |.$locale->text('E-mail');
@@ -417,6 +416,23 @@ sub include_in_report {
   push @f, qq|<input name="l_bcc" type=checkbox class=checkbox value=Y> |.$locale->text('Bcc');
   push @f, qq|<input name="l_site" type=checkbox class=checkbox value=Y $form->{l_site}> |.$locale->text('Site') if $form->{db} eq 'customer';
   push @f, qq|<input name="l_billing_type" type=checkbox class=checkbox value=Y $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran') if $form->{db} eq 'customer';
+
+  if ($form->{db} eq 'customer') {
+    push @f, qq|<b>Data ISP</b>|;
+    push @f, qq|<input name="l_ktp" type=checkbox class=checkbox value=Y $form->{l_ktp}> |.$locale->text('No. KTP');
+    push @f, qq|<input name="l_coordinate" type=checkbox class=checkbox value=Y> |.$locale->text('Titik Koordinat');
+    push @f, qq|<input name="l_odp_location" type=checkbox class=checkbox value=Y> |.$locale->text('Lokasi ODP');
+    push @f, qq|<input name="l_pon" type=checkbox class=checkbox value=Y> |.$locale->text('PON');
+    push @f, qq|<input name="l_cable_length" type=checkbox class=checkbox value=Y> |.$locale->text('Panjang Kabel');
+    push @f, qq|<input name="l_signal_dbm" type=checkbox class=checkbox value=Y> |.$locale->text('Sinyal Redaman (dBm)');
+    push @f, qq|<input name="l_device_type" type=checkbox class=checkbox value=Y> |.$locale->text('Jenis Perangkat');
+    push @f, qq|<input name="l_ip_address" type=checkbox class=checkbox value=Y> |.$locale->text('IP address');
+    push @f, qq|<input name="l_pppoe_username" type=checkbox class=checkbox value=Y> |.$locale->text('PPPoE username');
+    push @f, qq|<input name="l_pppoe_password" type=checkbox class=checkbox value=Y> |.$locale->text('PPPoE password');
+    push @f, qq|<input name="l_bandwidth" type=checkbox class=checkbox value=Y> |.$locale->text('Bandwidth (Mbps)');
+    push @f, qq|<input name="l_registration_fee" type=checkbox class=checkbox value=Y> |.$locale->text('Biaya Registrasi');
+    push @f, qq|<input name="l_monthly_fee" type=checkbox class=checkbox value=Y> |.$locale->text('Biaya Bulanan');
+  }
   push @f, qq|<input name="l_city" type=checkbox class=checkbox value=Y> |.$locale->text('City');
   push @f, qq|<input name="l_state" type=checkbox class=checkbox value=Y> |.$locale->text('State/Province');
   push @f, qq|<input name="l_zipcode" type=checkbox class=checkbox value=Y> |.$locale->text('Zip/Postal Code');
@@ -672,7 +688,7 @@ sub search_name {
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('No. KTP').qq|</th>
-		<td colspan=3><input name=contacttitle size=32></td>
+		<td colspan=3><input name=ktp size=32></td>
 	      </tr>
 		$employee
                 $typeofbusiness
@@ -778,11 +794,14 @@ sub list_names {
     $href .= "&l_contact=Y";
   }
   
-  push@ columns, (contacttitle, gender, occupation,
+  push@ columns, (ktp, gender, occupation,
              phone, fax, email, cc, bcc, employee,
 	     notes, discount, terms, creditlimit, outstanding, availablecredit);
   push @columns, 'site' if $form->{db} eq 'customer';
   push @columns, 'billing_type' if $form->{db} eq 'customer';
+  push @columns, qw(coordinate odp_location pon cable_length signal_dbm
+                    device_type ip_address pppoe_username pppoe_password
+                    bandwidth registration_fee monthly_fee) if $form->{db} eq 'customer';
   
   if ($form->{l_accounts}) {
     for (arap_accno, payment_accno, discount_accno, taxaccounts) {
@@ -934,10 +953,10 @@ sub list_names {
     $href .= "&notes=".$form->escape($form->{notes});
     $option .= "\n<br>".$locale->text('Notes')." : $form->{notes}";
   }
-  if ($form->{contacttitle}) {
-    $callback .= "&contacttitle=".$form->escape($form->{contacttitle},1);
-    $href .= "&contacttitle=".$form->escape($form->{contacttitle});
-    $option .= "\n<br>".$locale->text('No. KTP')." : $form->{contacttitle}";
+  if ($form->{ktp}) {
+    $callback .= "&ktp=".$form->escape($form->{ktp},1);
+    $href .= "&ktp=".$form->escape($form->{ktp});
+    $option .= "\n<br>".$locale->text('No. KTP')." : $form->{ktp}";
   }
   if ($form->{"$form->{db}number"}) {
     $callback .= qq|&$form->{db}number=|.$form->escape($form->{"$form->{db}number"},1);
@@ -1025,7 +1044,19 @@ sub list_names {
   $column_header{salutation} = qq|<th>|.$locale->text('Salutation').qq|</th>|;
   $column_header{firstname} = qq|<th><a class=listheading href=$href&sort=contact>|.$locale->text('Contact').qq|</a></th>|;
   $column_header{lastname} = qq|<th>&nbsp;</th>|;
-  $column_header{contacttitle} = qq|<th>|.$locale->text('No. KTP').qq|</th>|;
+  $column_header{ktp} = qq|<th><a class=listheading href=$href&sort=ktp>|.$locale->text('No. KTP').qq|</a></th>|;
+  $column_header{coordinate} = qq|<th class=listheading>|.$locale->text('Titik Koordinat').qq|</th>|;
+  $column_header{odp_location} = qq|<th class=listheading>|.$locale->text('Lokasi ODP').qq|</th>|;
+  $column_header{pon} = qq|<th class=listheading>|.$locale->text('PON').qq|</th>|;
+  $column_header{cable_length} = qq|<th class=listheading>|.$locale->text('Panjang Kabel').qq|</th>|;
+  $column_header{signal_dbm} = qq|<th class=listheading>|.$locale->text('Sinyal Redaman (dBm)').qq|</th>|;
+  $column_header{device_type} = qq|<th class=listheading>|.$locale->text('Jenis Perangkat').qq|</th>|;
+  $column_header{ip_address} = qq|<th class=listheading>|.$locale->text('IP address').qq|</th>|;
+  $column_header{pppoe_username} = qq|<th class=listheading>|.$locale->text('PPPoE username').qq|</th>|;
+  $column_header{pppoe_password} = qq|<th class=listheading>|.$locale->text('PPPoE password').qq|</th>|;
+  $column_header{bandwidth} = qq|<th class=listheading>|.$locale->text('Bandwidth (Mbps)').qq|</th>|;
+  $column_header{registration_fee} = qq|<th class=listheading>|.$locale->text('Biaya Registrasi').qq|</th>|;
+  $column_header{monthly_fee} = qq|<th class=listheading>|.$locale->text('Biaya Bulanan').qq|</th>|;
   $column_header{gender} = qq|<th>|.$locale->text('G').qq|</th>|;
   $column_header{occupation} = qq|<th><a class=listheading href=$href&sort=occupation>|.$locale->text('Occupation').qq|</a></th>|;
   $column_header{phone} = qq|<th><a class=listheading href=$href&sort=phone>|.$locale->text('Phone').qq|</a></th>|;
@@ -2157,7 +2188,7 @@ sub form_header {
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('No. KTP').qq|</th>
-		<td><input name=contacttitle size=35 maxlength=32 value="|.$form->quote($form->{contacttitle}).qq|"></td>
+		<td><input name=ktp size=35 maxlength=64 value="|.$form->quote($form->{ktp}).qq|"></td>
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Titik Koordinat').qq|</th>

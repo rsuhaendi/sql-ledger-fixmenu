@@ -666,6 +666,7 @@ CREATE TABLE contact (
   firstname varchar(32),
   lastname varchar(32),
   contacttitle varchar(32),
+  ktp varchar(64),
   occupation varchar(32),
   phone varchar(20),
   fax varchar(20),

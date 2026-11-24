@@ -550,13 +550,14 @@ $network_fields	      notes = |.$dbh->quote($form->{notes}).qq|,
   }
 
   $query = qq|INSERT INTO contact ($id trans_id, firstname, lastname,
-              salutation, contacttitle, occupation, phone, fax, mobile,
+              salutation, contacttitle, ktp, occupation, phone, fax, mobile,
 	      typeofcontact, email, gender) VALUES ($var
 	      $form->{id},
 	      |.$dbh->quote($form->{firstname}).qq|,
 	      |.$dbh->quote($form->{lastname}).qq|,
 	      |.$dbh->quote($form->{salutation}).qq|,
 	      |.$dbh->quote($form->{contacttitle}).qq|,
+	      |.$dbh->quote($form->{ktp}).qq|,
 	      |.$dbh->quote($form->{occupation}).qq|,
 	      |.$dbh->quote($form->{phone}).qq|,
 	      |.$dbh->quote($form->{fax}).qq|,
@@ -687,9 +688,9 @@ sub search {
     }
   }
 
-  if ($form->{contacttitle} ne "") {
-    $var = $form->like(lc $form->{contacttitle});
-    $where .= " AND lower(ct.contacttitle) LIKE '$var'";
+  if ($form->{ktp} ne "") {
+    $var = $form->like(lc $form->{ktp});
+    $where .= " AND lower(ct.ktp) LIKE '$var'";
   }
 
   @sf = qw(city state zipcode);
@@ -756,7 +757,7 @@ sub search {
 		 ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		 ad.country,
 		 pm.description AS paymentmethod,
-		 ct.salutation, ct.firstname, ct.lastname, ct.contacttitle,
+		 ct.salutation, ct.firstname, ct.lastname, ct.ktp,
 		 ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
                  FROM $form->{db} c
 	      JOIN contact ct ON (ct.trans_id = c.id)
@@ -804,7 +805,7 @@ sub search {
 		  ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		  ad.country,
 		  pm.description AS paymentmethod,
-		  ct.salutation, ct.firstname, ct.lastname, ct.contacttitle,
+		  ct.salutation, ct.firstname, ct.lastname, ct.ktp,
 		  ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
 		  FROM $form->{db} c
 		JOIN contact ct ON (ct.trans_id = c.id)
@@ -844,7 +845,7 @@ sub search {
 		  ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		  ad.country,
 		  pm.description AS paymentmethod,
-		  ct.salutation, ct.firstname, ct.lastname, ct.contacttitle,
+		  ct.salutation, ct.firstname, ct.lastname, ct.ktp,
 		  ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
 		  FROM $form->{db} c
 		JOIN contact ct ON (ct.trans_id = c.id)
@@ -881,7 +882,7 @@ sub search {
 		  ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		  ad.country,
 		  pm.description AS paymentmethod,
-		  ct.salutation, ct.firstname, ct.lastname, ct.contacttitle,
+		  ct.salutation, ct.firstname, ct.lastname, ct.ktp,
 		  ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
 		  FROM $form->{db} c
 		JOIN contact ct ON (ct.trans_id = c.id)
@@ -918,7 +919,7 @@ sub search {
 		  ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		  ad.country,
 		  pm.description AS paymentmethod,
-		  ct.salutation, ct.firstname, ct.lastname, ct.contacttitle,
+		  ct.salutation, ct.firstname, ct.lastname, ct.ktp,
 		  ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
 		  FROM $form->{db} c
 		JOIN contact ct ON (ct.trans_id = c.id)

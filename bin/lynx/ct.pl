@@ -2030,6 +2030,7 @@ sub form_header {
   }
 
   $employeelabel = $locale->text('Salesperson');
+  $employeeclass = ' class=salesperson-label';
  
   if ($form->{db} eq 'vendor') {
     $gifi = qq|
@@ -2037,12 +2038,13 @@ sub form_header {
 	  <td><input name=gifi_accno size=9 value="|.$form->quote($form->{gifi_accno}).qq|"></td>
 |;
     $employeelabel = $locale->text('Employee');
+    $employeeclass = '';
   }
 
 
   if ($form->{selectemployee}) {
     $employee = qq|
-	        <th align=right>$employeelabel</th>
+	        <th align=right$employeeclass>$employeelabel</th>
 		<td><select name=employee>|
 		.$form->select_option($form->{selectemployee}, $form->{employee}, 1)
 		.qq|</select>

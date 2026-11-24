@@ -208,7 +208,8 @@ body.menu {
   text-decoration: none;
 }
 
-.isp-select-all {
+.isp-select-all,
+.salesperson-label {
   color: #6a1b9a;
 }
 

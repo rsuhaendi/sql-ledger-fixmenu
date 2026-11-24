@@ -573,7 +573,7 @@ sub search {
   
   for (qw(name contact phone email)) { $form->{"l_$_"} = 'checked' }
   $form->{l_site} = 'checked' if $form->{db} eq 'customer';
-  for (qw(bandwidth monthly_fee isp_status)) { $form->{"l_$_"} = 'checked' if $form->{db} eq 'customer' }
+  for (qw(employee bandwidth monthly_fee isp_status)) { $form->{"l_$_"} = 'checked' if $form->{db} eq 'customer' }
 
   $form->{nextsub} = "list_names";
 
@@ -627,7 +627,10 @@ sub search {
 
 sub search_name {
 
-  $form->all_employees(\%myconfig, undef, undef, 1);
+  my @now = localtime;
+  my $today = sprintf '%04d-%02d-%02d', $now[5] + 1900, $now[4] + 1, $now[3];
+
+  $form->all_employees(\%myconfig, undef, $today, 0);
   
   if (@{ $form->{all_employee} }) {
     $form->{selectemployee} = "\n";

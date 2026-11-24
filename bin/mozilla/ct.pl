@@ -574,7 +574,7 @@ sub search {
 
   for (qw(name contact phone email)) { $form->{"l_$_"} = 'checked' }
   $form->{l_site} = 'checked' if $form->{db} eq 'customer';
-  for (qw(employee bandwidth monthly_fee isp_status)) { $form->{"l_$_"} = 'checked' if $form->{db} eq 'customer' }
+  for (qw(billing_type employee bandwidth monthly_fee isp_status)) { $form->{"l_$_"} = 'checked' if $form->{db} eq 'customer' }
 
   $form->{nextsub} = "list_names";
 

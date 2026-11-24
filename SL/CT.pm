@@ -196,7 +196,9 @@ sub create_links {
   $form->all_business($myconfig, $dbh);
 
   # employees/salespersons
-  $form->all_employees($myconfig, $dbh, undef, 1);
+  my @now = localtime;
+  my $today = sprintf '%04d-%02d-%02d', $now[5] + 1900, $now[4] + 1, $now[3];
+  $form->all_employees($myconfig, $dbh, $today, 0);
 
   $form->all_languages($myconfig, $dbh);
  

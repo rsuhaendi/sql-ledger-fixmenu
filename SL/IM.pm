@@ -1992,9 +1992,7 @@ sub charts_for_export {
 
   my $dbh = $form->dbconnect($myconfig);
 
-  my $query = qq|SELECT c.*, ah.description AS account_heading
-                 FROM chart c
-                 LEFT JOIN account_heading ah ON (ah.id = c.heading)|;
+  my $query = qq|SELECT c.*, c.category AS account_heading FROM chart c|;
   my @where;
   if ($filter && $filter ne '') {
     push @where, qq|c.accno ILIKE '%$filter%' OR c.description ILIKE '%$filter%'|;

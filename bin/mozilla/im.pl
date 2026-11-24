@@ -3848,6 +3848,11 @@ sub export_charts {
   my $filter = $form->{accno} || $form->{account};
   IM->charts_for_export(\%myconfig, \%$form, $filter);
 
+  # Ensure column_index is set for export
+  if (! $form->{column_index}) {
+    $form->{column_index} = "id=ID,accno=Account,account_heading=Account Heading,description=Description,category=Category";
+  }
+
   $form->{filename} ||= "chart_of_accounts" . ($filter ? "_" . $filter : "");
 
   open(OUT, ">-") or $form->error("STDOUT : $!");

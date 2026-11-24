@@ -3057,7 +3057,8 @@ sub export_customer_form {
   my @checked = qw(tabdelimited includeheader stringsquoted);
   my @input = qw(dateformat delimiter decimalpoint);
 
-  for (qw(customernumber name phone email city site bandwidth monthly_fee)) {
+  for (qw(customernumber name phone email city
+          billing_type employee site bandwidth monthly_fee isp_status)) {
     $form->{"l_$_"} = "checked";
   }
 
@@ -3085,7 +3086,6 @@ sub export_customer_form {
     [salutation       => 'Salutation'],
     [firstname        => 'First Name'],
     [lastname         => 'Last Name'],
-    [ktp              => 'No. KTP'],
     [phone            => 'Phone'],
     [fax              => 'Fax'],
     [email            => 'Email'],
@@ -3098,13 +3098,20 @@ sub export_customer_form {
     [country          => 'Country'],
     [notes            => 'Notes'],
     [business         => 'Business'],
-    [employee         => 'Salesperson'],
     [paymentmethod    => 'Payment Method'],
     [language         => 'Language'],
     [pricegroup       => 'Price Group'],
     [startdate        => 'Startdate'],
     [enddate          => 'Enddate'],
+    [dateprepared     => 'Date Prepared'],
+    [company          => 'Our Company Name']
+  );
+
+  my @isp_fields = (
+    [billing_type     => 'Jenis Pembayaran'],
+    [employee         => 'Salesperson'],
     [site             => 'Site'],
+    [ktp              => 'No. KTP'],
     [coordinate       => 'Titik Koordinat'],
     [odp_location     => 'Lokasi ODP'],
     [pon              => 'PON'],
@@ -3117,29 +3124,65 @@ sub export_customer_form {
     [bandwidth        => 'Bandwidth (Mbps)'],
     [registration_fee => 'Biaya Registrasi'],
     [monthly_fee      => 'Biaya Bulanan'],
-    [billing_type     => 'Jenis Pembayaran'],
-    [isp_status       => 'Status'],
-    [dateprepared     => 'Date Prepared'],
-    [company          => 'Our Company Name']
+    [isp_status       => 'Status']
   );
 
-  for my $field (@fields) {
+  my %isp_field = map { $_->[0] => 1 } @isp_fields;
+
+  for my $field (@fields, @isp_fields) {
     my ($key, $label) = @$field;
+    my $class = $isp_field{$key} ? qq|class="checkbox isp-check"| : qq|class=checkbox|;
+    my $onchange = $isp_field{$key} ? qq| onchange="SyncISPAll()"| : '';
     $includeinreport{$key} = {
       ndx => $i++,
       ($key eq 'dateprepared') ? (input => 1) : (checkbox => 1),
-      html => qq|<input name="l_$key" class=checkbox type=checkbox value=Y $form->{"l_$key"}>|,
+      html => qq|<input name="l_$key" type=checkbox $class value=Y$onchange $form->{"l_$key"}>|,
       label => $locale->text($label)
     };
   }
 
   my @f;
+  my @isp;
   for (sort { $includeinreport{$a}->{ndx} <=> $includeinreport{$b}->{ndx} } keys %includeinreport) {
     push @checked, "l_$_";
-    if ($includeinreport{$_}->{checkbox}) {
-      push @f, "$includeinreport{$_}->{html} $includeinreport{$_}->{label}";
-    }
+    next unless $includeinreport{$_}->{checkbox};
+    my $entry = "$includeinreport{$_}->{html} $includeinreport{$_}->{label}";
+    if ($isp_field{$_}) { push @isp, $entry } else { push @f, $entry }
   }
+
+  unshift @isp, qq|<input type=checkbox class=checkbox name=l_isp_all value=Y onclick="CheckISP(this.checked)"> <span class="small isp-select-all">|.$locale->text('Pilih semua').qq|</span>|;
+
+  my $isp_js = qq~
+<script language="javascript">
+<!--
+function CheckISP(checked) {
+  var frm = document.forms['main'];
+  if (!frm) return;
+  var boxes = frm.querySelectorAll('input.isp-check');
+  for (var i = 0; i < boxes.length; i++) boxes[i].checked = checked;
+}
+
+function SyncISPAll() {
+  var frm = document.forms['main'];
+  if (!frm) return;
+  var boxes = frm.querySelectorAll('input.isp-check');
+  var master = frm.elements['l_isp_all'];
+  if (!master || !boxes.length) return;
+  var all = true;
+  for (var i = 0; i < boxes.length; i++) {
+    if (!boxes[i].checked) { all = false; break; }
+  }
+  master.checked = all;
+}
+
+if (document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', SyncISPAll);
+} else if (window.attachEvent) {
+  window.attachEvent('onload', SyncISPAll);
+}
+//-->
+</script>
+~;
 
   $form->header;
 
@@ -3234,6 +3277,34 @@ sub export_customer_form {
             </table>
 	  </td>
 	</tr>
+|;
+
+  if (@isp) {
+    print qq|
+	<tr>
+	  <th align=right nowrap>|.$locale->text('Data ISP').qq|</th>
+	  <td>
+	    $isp_js
+	    <table>
+|;
+
+    while (@isp) {
+      print qq|<tr>\n|;
+      for (1 .. 5) {
+        print qq|<td nowrap>|. shift @isp;
+        print qq|</td>\n|;
+      }
+      print qq|</tr>\n|;
+    }
+
+    print qq|
+	    </table>
+	  </td>
+	</tr>
+|;
+  }
+
+  print qq|
       </table>
     </td>
   </tr>

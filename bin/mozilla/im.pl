@@ -3850,6 +3850,9 @@ sub export_charts {
 
   $form->{filename} ||= "chart_of_accounts" . ($filter ? "_" . $filter : "");
 
+  open(OUT, ">-") or $form->error("STDOUT : $!");
+  binmode(OUT);
+
   %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
   $lf = $lf{$form->{linefeed}} || "\n";
 

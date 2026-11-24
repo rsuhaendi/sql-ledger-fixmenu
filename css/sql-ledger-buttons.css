@@ -204,8 +204,7 @@ body.menu {
 .menuActive a,
 .menuActive a:hover {
   color: #999999;
-  cursor: default;
-  pointer-events: none;
+  cursor: pointer;
   text-decoration: none;
 }
 

@@ -414,11 +414,10 @@ sub include_in_report {
   push @f, qq|<input name="l_email" type=checkbox class=checkbox value=Y $form->{l_email}> |.$locale->text('E-mail');
   push @f, qq|<input name="l_cc" type=checkbox class=checkbox value=Y> |.$locale->text('Cc');
   push @f, qq|<input name="l_bcc" type=checkbox class=checkbox value=Y> |.$locale->text('Bcc');
-  push @f, qq|<input name="l_site" type=checkbox class=checkbox value=Y $form->{l_site}> |.$locale->text('Site') if $form->{db} eq 'customer';
-  push @f, qq|<input name="l_billing_type" type=checkbox class=checkbox value=Y $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran') if $form->{db} eq 'customer';
-
   if ($form->{db} eq 'customer') {
     push @f, qq|<b>Data ISP</b>|;
+    push @f, qq|<input name="l_billing_type" type=checkbox class=checkbox value=Y $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran');
+    push @f, qq|<input name="l_site" type=checkbox class=checkbox value=Y $form->{l_site}> |.$locale->text('Site');
     push @f, qq|<input name="l_ktp" type=checkbox class=checkbox value=Y $form->{l_ktp}> |.$locale->text('No. KTP');
     push @f, qq|<input name="l_coordinate" type=checkbox class=checkbox value=Y> |.$locale->text('Titik Koordinat');
     push @f, qq|<input name="l_odp_location" type=checkbox class=checkbox value=Y> |.$locale->text('Lokasi ODP');

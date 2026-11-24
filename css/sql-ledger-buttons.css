@@ -209,7 +209,8 @@ body.menu {
 }
 
 .isp-select-all,
-.salesperson-label {
+.salesperson-label,
+.billing-type-label {
   color: #6a1b9a;
 }
 

@@ -3141,10 +3141,10 @@ sub export_customer_form {
     }
   }
 
+  $form->header;
+
   &change_report(\%$form, \@input, \@checked, \%radio);
   &calendar;
-
-  $form->header;
 
   print qq|
 <body>

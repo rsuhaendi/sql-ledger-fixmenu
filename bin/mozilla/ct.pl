@@ -24,6 +24,7 @@ require "$form->{path}/js.pl";
 sub add {
 
   $form->{title} = "Add";
+  $form->{taxincluded} = 1 if $form->{db} eq 'customer';
 
   $form->{callback} = "$form->{script}?action=add&db=$form->{db}&typeofcontact=$form->{typeofcontact}&path=$form->{path}&login=$form->{login}" unless $form->{callback};
 

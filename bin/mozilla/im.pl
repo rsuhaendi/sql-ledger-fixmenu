@@ -181,7 +181,7 @@ sub export {
 
   %title = ( payment  => 'Payments',
              customer => 'Customers',
-             chart    => 'Chart Of Account'
+             chart    => 'Chart Of Accounts'
 	   );
 
 # $locale->text('Export Payments')

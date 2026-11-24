@@ -109,6 +109,7 @@ $self{texts} = {
   'Startdate'                   => 'Tanggal Mulai',
   'State'                       => 'Negara Bagian',
   'State/Province'              => 'Provinsi',
+  'Status'                      => 'Status',
   'Summary'                     => 'Ringkasan',
   'Tax'                         => 'Pajak',
   'Tax Included'                => 'Termasuk Pajak',

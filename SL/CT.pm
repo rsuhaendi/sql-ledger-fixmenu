@@ -284,6 +284,7 @@ sub save {
   for (qw(id terms discountterms taxincluded addressid contactid remittancevoucher)) { $form->{$_} *= 1 }
   
   for (qw(creditlimit threshold)) { $form->{$_} = $form->parse_amount($myconfig, $form->{$_}) }
+  for (qw(registration_fee monthly_fee)) { $form->{$_} = $form->parse_amount($myconfig, $form->{$_}) if $form->{db} eq 'customer' }
  
   my $bank_address_id;
   
@@ -469,7 +470,7 @@ sub save {
   if ($form->{db} eq 'customer') {
     for my $f (qw(site coordinate odp_location pon cable_length signal_dbm
                   device_type ip_address pppoe_username pppoe_password
-                  bandwidth registration_fee monthly_fee billing_type)) {
+                  bandwidth registration_fee monthly_fee billing_type isp_status)) {
       $network_fields .= "              $f = ".$dbh->quote($form->{$f}).qq|,\n|;
     }
   }

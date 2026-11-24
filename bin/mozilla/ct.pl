@@ -474,9 +474,10 @@ sub include_in_report {
     push @isp, qq|<input name="l_ip_address" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('IP address');
     push @isp, qq|<input name="l_pppoe_username" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE username');
     push @isp, qq|<input name="l_pppoe_password" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PPPoE password');
-    push @isp, qq|<input name="l_bandwidth" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Bandwidth (Mbps)');
-    push @isp, qq|<input name="l_registration_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Registrasi');
-    push @isp, qq|<input name="l_monthly_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Bulanan');
+    push @isp, qq|<input name="l_bandwidth" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_bandwidth}> |.$locale->text('Bandwidth (Mbps)');
+    push @isp, qq|<input name="l_registration_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_registration_fee}> |.$locale->text('Biaya Registrasi');
+    push @isp, qq|<input name="l_monthly_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_monthly_fee}> |.$locale->text('Biaya Bulanan');
+    push @isp, qq|<input name="l_isp_status" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_isp_status}> |.$locale->text('Status');
   }
 
   my $isp_js = '';
@@ -573,6 +574,7 @@ sub search {
 
   for (qw(name contact phone email)) { $form->{"l_$_"} = 'checked' }
   $form->{l_site} = 'checked' if $form->{db} eq 'customer';
+  for (qw(bandwidth monthly_fee isp_status)) { $form->{"l_$_"} = 'checked' if $form->{db} eq 'customer' }
 
   $form->{nextsub} = "list_names";
 
@@ -860,12 +862,12 @@ sub list_names {
   push @columns, 'billing_type' if $form->{db} eq 'customer';
   push @columns, qw(coordinate odp_location pon cable_length signal_dbm
                     device_type ip_address pppoe_username pppoe_password
-                    bandwidth registration_fee monthly_fee) if $form->{db} eq 'customer';
+                    bandwidth registration_fee monthly_fee isp_status) if $form->{db} eq 'customer';
 
   if ($form->{l_isp_all} eq 'Y') {
     for (qw(billing_type employee site ktp coordinate odp_location pon cable_length
             signal_dbm device_type ip_address pppoe_username pppoe_password
-            bandwidth registration_fee monthly_fee)) {
+            bandwidth registration_fee monthly_fee isp_status)) {
       $form->{"l_$_"} = 'Y';
     }
   }
@@ -1124,6 +1126,7 @@ sub list_names {
   $column_header{bandwidth} = qq|<th class=listheading>|.$locale->text('Bandwidth (Mbps)').qq|</th>|;
   $column_header{registration_fee} = qq|<th class=listheading>|.$locale->text('Biaya Registrasi').qq|</th>|;
   $column_header{monthly_fee} = qq|<th class=listheading>|.$locale->text('Biaya Bulanan').qq|</th>|;
+  $column_header{isp_status} = qq|<th class=listheading>|.$locale->text('Status').qq|</th>|;
   $column_header{gender} = qq|<th>|.$locale->text('G').qq|</th>|;
   $column_header{occupation} = qq|<th><a class=listheading href=$href&sort=occupation>|.$locale->text('Occupation').qq|</a></th>|;
   $column_header{phone} = qq|<th><a class=listheading href=$href&sort=phone>|.$locale->text('Phone').qq|</a></th>|;
@@ -1262,6 +1265,10 @@ sub list_names {
       
       $ref->{notes} =~ s/\r?\n/<br>/g;
       for (@column_index) { $column_data{$_} = "<td>$ref->{$_}&nbsp;</td>" }
+
+      for (qw(registration_fee monthly_fee)) {
+        $column_data{$_} = "<td align=right>".$form->format_amount(\%myconfig, $ref->{$_}, $form->{precision}, "&nbsp;")."</td>";
+      }
 
       $column_data{ndx} = "<td align=right>$i</td>";
       $column_data{delete} = qq|<td><input name="id_$i" class=checkbox type=checkbox value=$ref->{id}></td>|;
@@ -1852,7 +1859,7 @@ sub list_history {
 
 sub form_header {
 
-  for (qw(creditlimit threshold)) { $form->{$_} = $form->format_amount(\%myconfig, $form->{$_}, $form->{precision}) }
+  for (qw(creditlimit threshold registration_fee monthly_fee)) { $form->{$_} = $form->format_amount(\%myconfig, $form->{$_}, $form->{precision}) }
   for (qw(discount cashdiscount)) { $form->{$_} = $form->format_amount(\%myconfig, $form->{$_}) }
  
   for (qw(terms discountterms)) { $form->{$_} = "" if ! $form->{$_} }
@@ -2304,6 +2311,10 @@ sub form_header {
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Biaya Bulanan').qq|</th>
 		<td><input name=monthly_fee size=20 value="$form->{monthly_fee}"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Status').qq|</th>
+		<td><input name=isp_status size=35 value="$form->{isp_status}"></td>
 	      </tr>
 	    </table>
 	  </td>

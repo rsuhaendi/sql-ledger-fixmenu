@@ -1903,5 +1903,46 @@ sub reconcile_payments {
 }
 
 
+sub customers_for_export {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect($myconfig);
+
+  my %defaults = $form->get_defaults($dbh, \@{['company', 'precision']});
+  for (keys %defaults) { $form->{$_} = $defaults{$_} }
+
+  my $query = qq|SELECT c.*, b.description AS business,
+                        e.name AS employee,
+                        g.pricegroup,
+                        l.description AS language,
+                        pm.description AS paymentmethod,
+                        ad.address1, ad.address2, ad.city, ad.state,
+                        ad.zipcode, ad.country,
+                        ct.salutation, ct.firstname, ct.lastname, ct.ktp,
+                        ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
+                   FROM customer c
+                   JOIN contact ct ON (ct.trans_id = c.id)
+                   LEFT JOIN address ad ON (ad.trans_id = c.id)
+                   LEFT JOIN business b ON (c.business_id = b.id)
+                   LEFT JOIN employee e ON (c.employee_id = e.id)
+                   LEFT JOIN pricegroup g ON (c.pricegroup_id = g.id)
+                   LEFT JOIN language l ON (l.code = c.language_code)
+                   LEFT JOIN paymentmethod pm ON (pm.id = c.paymentmethod_id)
+                   ORDER BY c.name, c.id|;
+
+  my $sth = $dbh->prepare($query) || $form->dberror($query);
+  $sth->execute || $form->dberror($query);
+
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    for (qw(address1 address2 city state zipcode country)) { $ref->{$_} ||= "" }
+    push @{ $form->{TR} }, $ref;
+  }
+
+  $sth->finish;
+  $dbh->disconnect;
+
+}
+
+
 1;
 

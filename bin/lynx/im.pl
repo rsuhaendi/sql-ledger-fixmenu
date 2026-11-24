@@ -179,15 +179,22 @@ sub import {
 
 sub export {
 
-  %title = ( payment => 'Payments'
+  %title = ( payment  => 'Payments',
+             customer => 'Customers'
 	   );
 
 # $locale->text('Export Payments')
+# $locale->text('Export Customers')
 
   $form->{filename} ||= time;
 
   $msg = "Export $title{$form->{type}}";
   $form->{title} = $locale->text($msg);
+
+  if ($form->{type} eq 'customer') {
+    &export_customer_form;
+    return;
+  }
   
   $form->helpref("export_$form->{type}", $myconfig{countrycode});
   
@@ -3014,6 +3021,567 @@ sub yes__reconcile_payments {
 
 }
 
+
+
+sub export_customer_form {
+
+  $form->{nextsub} = "ex_customer";
+  $form->{action} = "continue";
+
+  $form->{reportcode} = "export_customer";
+  $form->{initreport} = 1;
+
+  $form->helpref("export_$form->{type}", $myconfig{countrycode});
+
+  my $selectdateformat = "";
+  for (qw(mm-dd-yy mm/dd/yy dd-mm-yy dd/mm/yy dd.mm.yy yyyy-mm-dd mmddyy ddmmyy yymmdd mmddyyyy ddmmyyyy yyyymmdd)) { $selectdateformat .= "$_\n" }
+  $form->{dateformat} = $myconfig{dateformat};
+
+  $form->reports(\%myconfig);
+
+  my $reportform = "";
+  if (@{ $form->{all_report} }) {
+    $form->{selectreportform} = "\n";
+    for (@{ $form->{all_report} }) { $form->{selectreportform} .= qq|$_->{reportdescription}--$_->{reportid}\n| }
+
+    $reportform = qq|
+      <tr>
+        <th align="right">|.$locale->text('Report').qq|</th>
+        <td>
+        <select name=report onChange="ChangeReport();">|.$form->select_option($form->{selectreportform}, undef, 1).qq|</select>
+        </td>
+      </tr>
+|;
+  }
+
+  my @checked = qw(tabdelimited includeheader stringsquoted);
+  my @input = qw(dateformat delimiter decimalpoint);
+
+  for (qw(customernumber name phone email city site bandwidth monthly_fee)) {
+    $form->{"l_$_"} = "checked";
+  }
+
+  for (qw(includeheader stringsquoted)) { $form->{$_} = "checked" }
+
+  $form->{filetype} ||= "csv";
+  $form->{$form->{filetype}} = 1;
+  $form->{UNIX} = 1;
+
+  my %radio = (filetype => { csv => 0, txt => 1 },
+               linefeed => { UNIX => 0, MAC => 1, DOS => 2, noLF => 3 });
+  for my $item (keys %radio) {
+    for (keys %{ $radio{$item} }) { $form->{$_} = "checked" if $form->{$_} }
+  }
+
+  $form->{delimiter} = ",";
+  $form->{decimalpoint} = ".";
+
+  my $i = 1;
+  my %includeinreport;
+  my @fields = (
+    [customernumber   => 'Customer Number'],
+    [name             => 'Customer'],
+    [contact          => 'Contact'],
+    [salutation       => 'Salutation'],
+    [firstname        => 'First Name'],
+    [lastname         => 'Last Name'],
+    [ktp              => 'No. KTP'],
+    [phone            => 'Phone'],
+    [fax              => 'Fax'],
+    [email            => 'Email'],
+    [mobile           => 'Mobile'],
+    [address1         => 'Address Line 1'],
+    [address2         => 'Address Line 2'],
+    [city             => 'City'],
+    [state            => 'State/Province'],
+    [zipcode          => 'Zip/Postal Code'],
+    [country          => 'Country'],
+    [notes            => 'Notes'],
+    [business         => 'Business'],
+    [employee         => 'Salesperson'],
+    [paymentmethod    => 'Payment Method'],
+    [language         => 'Language'],
+    [pricegroup       => 'Price Group'],
+    [startdate        => 'Startdate'],
+    [enddate          => 'Enddate'],
+    [site             => 'Site'],
+    [coordinate       => 'Titik Koordinat'],
+    [odp_location     => 'Lokasi ODP'],
+    [pon              => 'PON'],
+    [cable_length     => 'Panjang Kabel'],
+    [signal_dbm       => 'Sinyal Redaman (dBm)'],
+    [device_type      => 'Jenis Perangkat'],
+    [ip_address       => 'IP address'],
+    [pppoe_username   => 'PPPoE username'],
+    [pppoe_password   => 'PPPoE password'],
+    [bandwidth        => 'Bandwidth (Mbps)'],
+    [registration_fee => 'Biaya Registrasi'],
+    [monthly_fee      => 'Biaya Bulanan'],
+    [billing_type     => 'Jenis Pembayaran'],
+    [isp_status       => 'Status'],
+    [dateprepared     => 'Date Prepared'],
+    [company          => 'Our Company Name']
+  );
+
+  for my $field (@fields) {
+    my ($key, $label) = @$field;
+    $includeinreport{$key} = {
+      ndx => $i++,
+      ($key eq 'dateprepared') ? (input => 1) : (checkbox => 1),
+      html => qq|<input name="l_$key" class=checkbox type=checkbox value=Y $form->{"l_$key"}>|,
+      label => $locale->text($label)
+    };
+  }
+
+  my @f;
+  for (sort { $includeinreport{$a}->{ndx} <=> $includeinreport{$b}->{ndx} } keys %includeinreport) {
+    push @checked, "l_$_";
+    if ($includeinreport{$_}->{checkbox}) {
+      push @f, "$includeinreport{$_}->{html} $includeinreport{$_}->{label}";
+    }
+  }
+
+  &change_report(\%$form, \@input, \@checked, \%radio);
+  &calendar;
+
+  $form->header;
+
+  print qq|
+<body>
+
+<form method="post" name="main" action="$form->{script}">
+
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{helpref}$form->{title}</a></th>
+  </tr>
+  <tr height="5"></tr>
+  <tr>
+    <td>
+      <table>
+        $reportform
+        <tr>
+          <th align="right">|.$locale->text('Date Prepared').qq|</th>
+          <td>
+            <input name=dateprepared size=11 value="$form->{dateprepared}" title="$myconfig{dateformat}">|.&js_calendar("main", "dateprepared").qq|
+          </td>
+          <td>$includeinreport{dateprepared}->{html}</td>
+        </tr>
+        <tr>
+          <th align="right">|.$locale->text('Date Format').qq|</th>
+          <td>
+            <select name=dateformat>|
+            .$form->select_option($selectdateformat, $form->{dateformat})
+            .qq|
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <table>
+	<tr>
+	  <th align=right>|.$locale->text('Type of File').qq|</th>
+	  <td>
+	    <table>
+	      <tr>
+                <td><input name=filetype type=radio class=radio value=csv $form->{csv}>&nbsp;|.$locale->text('csv').qq|</td>
+		<td>|.$locale->text('Delimiter').qq|&nbsp;<input name=delimiter size=2 value="$form->{delimiter}"></td>
+		<td><input name=tabdelimited type=checkbox class=checkbox $form->{tabdelimited}>&nbsp;|.$locale->text('Tab delimited').qq|</td>
+		<td><input name=includeheader type=checkbox class=checkbox $form->{includeheader}>&nbsp;|.$locale->text('Include Header').qq|</td>
+		<td><input name=stringsquoted type=checkbox class=checkbox $form->{stringsquoted}>&nbsp;|.$locale->text('Strings quoted').qq|</td>
+	      </tr>
+	      <tr>
+                <td><input name=filetype type=radio class=radio value=txt $form->{txt}>&nbsp;|.$locale->text('Fixed Length Text').qq|</td>
+	      </tr>
+	    </table>
+	  </td>
+	</tr>
+	<tr>
+	  <th align=right>|.$locale->text('Linefeed').qq|</th>
+	  <td>
+	    <table>
+	      <tr>
+          <td><input name=linefeed type=radio class=radio value="UNIX" $form->{UNIX}>&nbsp;|.$locale->text('UNIX').qq|</td>
+          <td><input name=linefeed type=radio class=radio value="MAC" $form->{CR}>&nbsp;|.$locale->text('MAC').qq|</td>
+          <td><input name=linefeed type=radio class=radio value="DOS" $form->{DOS}>&nbsp;|.$locale->text('DOS').qq|</td>
+          <td><input name=linefeed type=radio class=radio value="noLF" $form->{noLF}>&nbsp;|.$locale->text('None').qq|</td>
+	      </tr>
+	    </table>
+	  </td>
+	</tr>
+	<tr>
+	  <th align=right>|.$locale->text('Decimal Point').qq|</th>
+	  <td><input name=decimalpoint size=2 value="$form->{decimalpoint}"></td>
+	</tr>
+	<tr>
+	  <th align=right nowrap>|.$locale->text('Include in Report').qq|</th>
+	  <td>
+	    <table>
+|;
+
+  while (@f) {
+    print qq|<tr>\n|;
+    for (1 .. 5) {
+      print qq|<td nowrap>|. shift @f;
+      print qq|</td>\n|;
+    }
+    print qq|</tr>\n|;
+  }
+
+  print qq|
+            </table>
+	  </td>
+	</tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td><hr size=3 noshade></td>
+  </tr>
+
+</table>
+
+<br>
+<input name=action class=submit type=submit value="|.$locale->text('Continue').qq|">
+|;
+
+  $form->hide_form(qw(initreport reportcode defaultcurrency title type action nextsub login path));
+
+  $form->{flds} = "";
+  for (sort { $includeinreport{$a}->{ndx} <=> $includeinreport{$b}->{ndx} } keys %includeinreport) { $form->{flds} .= "$_=$includeinreport{$_}->{label}," }
+  chop $form->{flds};
+  $form->hide_form(qw(flds));
+
+  if ($form->{menubar}) {
+    require "$form->{path}/menu.pl";
+    &menubar;
+  }
+
+  print qq|
+</form>
+
+</body>
+</html>
+|;
+
+}
+
+
+sub ex_customer {
+
+  $form->retrieve_form(\%myconfig);
+
+  ($form->{reportdescription}, $form->{reportid}) = split /--/, $form->{report};
+
+  if ($form->{initreport} && $form->{reportid}) {
+    $form->retrieve_report(\%myconfig);
+  }
+
+  my @columns = ();
+  my %column_data;
+  for (split /,/, $form->{flds}) {
+    my ($column, $label) = split /=/, $_;
+    push @columns, $column;
+    $column_data{$column} = $label;
+  }
+
+  my @flds = ();
+  my @column_index = qw(ndx);
+  my %column_index;
+  my $i = 0;
+
+  if ($form->{column_index}) {
+    for (split /,/, $form->{column_index}) {
+      s/=.*//;
+      push @column_index, $_;
+      $column_index{$_} = ++$i;
+      $form->{"l_$_"} = "Y";
+    }
+  } else {
+    for (@columns) {
+      if ($form->{"l_$_"} eq "Y") {
+	push @column_index, $_;
+	$column_index{$_} = ++$i;
+	$form->{column_index} .= "$_=$column_data{$_},";
+      }
+    }
+    chop $form->{column_index};
+  }
+
+  push @flds, "id";
+
+  $form->{callback} = "$form->{script}?action=export";
+  for (qw(type login path)) { $form->{callback} .= "&$_=$form->{$_}" }
+
+  &xrefhdr;
+
+  $form->{nextsub} = "ex_customer";
+
+  if ($form->{editcolumn}) {
+    delete $form->{id};
+    &edit_column;
+    exit;
+  }
+
+  IM->customers_for_export(\%myconfig, \%$form);
+
+  if ($form->{initreport}) {
+
+    @column_index = ();
+    $form->{column_index} = "";
+
+    $i = 0;
+    my $j = 0;
+
+    for (split /,/, $form->{report_column_index}) {
+      $_ =~ s/=.*//;
+
+      $j++;
+
+      if (! $column_data{$_}) {
+	$form->{"l_$_"} = 1;
+	my $label = $_;
+	$label =~ s/_/ /g;
+	$form->{flds} .= qq|,$_=$label|;
+	$column_data{$_} = $label;
+      }
+
+      if ($form->{"l_$_"}) {
+	push @column_index, $_;
+	delete $column_index{$_};
+	$i++;
+
+	for my $item (qw(a w f)) {
+	  $form->{"${item}_$i"} = $form->{"report_${item}_$j"};
+	  $form->{"t_${item}_$i"} = $form->{"report_t_${item}_$j"};
+	  $form->{"h_${item}_$i"} = $form->{"report_h_${item}_$j"};
+	}
+      }
+    }
+
+    for (sort { $column_index{$a} <=> $column_index{$b} } keys %column_index) {
+      push @column_index, $_;
+    }
+
+    $form->{column_index} = "";
+    for (@column_index) { $form->{column_index} .= "$_=$column_data{$_}," }
+    chop $form->{column_index};
+
+    unshift @column_index, qw(ndx);
+
+  } else {
+    if ($form->{movecolumn}) {
+      @column_index = $form->sort_column_index;
+      unshift @column_index, qw(ndx);
+    }
+  }
+
+  delete $form->{initreport};
+
+  $i = 0;
+  %column_index = ();
+  for (@column_index) { $column_index{$_} = $i++ }
+
+  $form->save_form(\%myconfig);
+
+  my $href = "$form->{script}?action=ex_customer";
+  for (qw(path login id)) { $href .= qq|&$_=$form->{$_}| }
+
+  $myconfig{numberformat} = "1000$form->{decimalpoint}" . "0" x $form->{precision};
+
+  $column_data{ndx} = qq|<input name="allbox" type=checkbox class=checkbox value="1" checked onChange="CheckAll();">|;
+
+  $form->helpref("export_$form->{type}", $myconfig{countrycode});
+  $form->header;
+
+  &check_all(qw(allbox ndx_));
+
+  print qq|
+   
+<body>
+
+<form method=post action=$form->{script}>
+
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{helpref}$form->{title}</a></th>
+  </tr>
+  <tr height="5"></tr>
+  <tr>
+    <td>
+      <table width=100%>
+|;
+
+  my $l = $#column_index;
+
+  print qq|<tr>
+	     <td></td>|;
+
+  if ($l > 1) {
+    for (1 .. $l) {
+      print "\n<td align=center><a href=$href&movecolumn=$column_index[$_],left><img src=$images/left.png border=0><a href=$href&movecolumn=$column_index[$_],right><img src=$images/right.png border=0></td>";
+    }
+  }
+
+  print qq|
+	</tr>
+|;
+
+  for $i (1 .. $l) {
+    $form->hide_form(map { "${_}_$i" } qw(f a w t_f t_a t_w h_f h_a h_w));
+  }
+
+  my $dateprepared = $form->format_date($form->{dateformat}, $form->datetonum(\%myconfig, $form->{dateprepared}));
+
+  print qq|
+      <tr class=listheading>
+|;
+
+  print "\n<th class=listheading nowrap>$column_data{$column_index[0]}</th>";
+  for (1 .. $l) {
+    print qq|\n<th nowrap><a class=listheading href="$href&editcolumn=$column_index[$_],$_">$column_data{$column_index[$_]}</a></th>|;
+  }
+
+  print qq|
+      </tr>
+|;
+
+  $i = 0;
+  my $j = 0;
+  $l = $#{ $form->{TR} } + 1;
+
+  foreach my $ref (@{ $form->{TR} }) {
+
+    $i++;
+    $j++;
+
+    $ref->{dateprepared} = $dateprepared;
+    $ref->{company} = $form->{company};
+
+    for (qw(registration_fee monthly_fee)) {
+      $ref->{$_} = $form->format_amount(\%myconfig, $ref->{$_}, 2) if defined $ref->{$_};
+    }
+
+    print qq|
+      <tr class=listrow| . ($j % 2) . qq|>
+|;
+
+    print qq|<td><input name="ndx_$i" type=checkbox class=checkbox value=$ref->{id} checked></td>|;
+
+    for (1 .. $#column_index) {
+      my $f = exists $ref->{$column_index[$_]} ? $ref->{$column_index[$_]} : $form->{$column_index[$_]};
+      print qq|<td nowrap align="$form->{"a_$column_index{$_}"}">|.$form->pad($f, $form->{"f_$column_index{$_}"}, $form->{"a_$column_index{$_}"}, $form->{"w_$column_index{$_}"}, 1).qq|</td>|;
+    }
+
+    print qq|
+	</tr>
+|;
+
+  }
+
+  $form->{rowcount} = $i;
+
+  print qq|
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td><hr size=3 noshade></td>
+  </tr>
+
+</table>
+|;
+
+  $form->hide_form(qw(login path report reportcode dateprepared dateformat filetype delimiter decimalpoint tabdelimited includeheader stringsquoted type flds column_index rowcount linefeed callback nextsub title));
+
+  my %button = ('Export Customers' => { ndx => 1, key => 'E', value => $locale->text('Export Customers') },
+                'Add Column'       => { ndx => 2, key => 'A', value => $locale->text('Add Column') },
+                'Save Report'       => { ndx => 3, key => 'S', value => $locale->text('Save Report') }
+	      );
+
+  delete $button{'Export Customers'} if ! $form->{rowcount};
+
+  $form->print_button(\%button);
+
+  if ($form->{menubar}) {
+    require "$form->{path}/menu.pl";
+    &menubar;
+  }
+
+  print qq|
+</form>
+
+</body>
+</html>
+|;
+
+}
+
+
+sub export_customers {
+
+  my %id;
+  for (1 .. $form->{rowcount}) {
+    $id{$form->{"ndx_$_"}} = $_;
+  }
+
+  IM->customers_for_export(\%myconfig, \%$form);
+
+  my @column_index;
+  my %column_index;
+  my $idx = 1;
+  for (split /,/, $form->{column_index}) {
+    my ($f, $n) = split /=/, $_;
+    $column_index{$f} = $idx++;
+    push @column_index, $f;
+  }
+
+  my %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
+  my $lf = $lf{$form->{linefeed}} || "\n";
+
+  $form->{dateprepared} = $form->format_date($form->{dateformat}, $form->datetonum(\%myconfig, $form->{dateprepared}));
+
+  $myconfig{numberformat} = "1000$form->{decimalpoint}" . "0" x $form->{precision};
+
+  my $i = 0;
+  foreach my $ref (@{ $form->{TR} }) {
+
+    next unless $id{$ref->{id}};
+
+    $i++;
+
+    $ref->{dateprepared} = $form->{dateprepared};
+    $ref->{company} = $form->{company};
+
+    for (qw(registration_fee monthly_fee)) {
+      $ref->{$_} = $form->format_amount(\%myconfig, $ref->{$_}, 2) if defined $ref->{$_};
+    }
+
+    for (@column_index) {
+      my $f = exists $ref->{$_} ? $ref->{$_} : $form->{$_};
+      $form->{"${_}_$i"} = $form->pad($f, $form->{"f_$column_index{$_}"}, $form->{"a_$column_index{$_}"}, $form->{"w_$column_index{$_}"});
+    }
+
+  }
+
+  $form->{rowcount} = $i;
+
+  $form->{filename} ||= time;
+
+  open(OUT, ">-") or $form->error("STDOUT : $!");
+  binmode(OUT);
+
+  print qq|Content-Type: application/file;
+Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\n|;
+
+  &export_payments_csv if $form->{filetype} eq 'csv';
+  &export_payments_txt if $form->{filetype} eq 'txt';
+
+  close(OUT);
+
+}
 
 
 sub continue { &{ $form->{nextsub} } };

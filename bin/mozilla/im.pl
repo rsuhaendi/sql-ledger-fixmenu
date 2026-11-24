@@ -3057,7 +3057,7 @@ sub export_customer_form {
   my @checked = qw(tabdelimited includeheader stringsquoted);
   my @input = qw(dateformat delimiter decimalpoint);
 
-  for (qw(customernumber name phone email city
+  for (qw(customernumber name phone email city taxincluded
           billing_type employee site bandwidth monthly_fee isp_status)) {
     $form->{"l_$_"} = "checked";
   }
@@ -3099,6 +3099,7 @@ sub export_customer_form {
     [notes            => 'Notes'],
     [business         => 'Business'],
     [paymentmethod    => 'Payment Method'],
+    [taxincluded      => 'Tax Included'],
     [language         => 'Language'],
     [pricegroup       => 'Price Group'],
     [startdate        => 'Startdate'],

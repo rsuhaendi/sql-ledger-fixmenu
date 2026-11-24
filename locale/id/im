@@ -63,6 +63,7 @@ $self{texts} = {
   'State'                       => 'Negara Bagian',
   'State/Province'              => 'Provinsi',
   'Tax'                         => 'Pajak',
+  'Tax Included'                => 'Termasuk Pajak',
   'Terms'                       => 'Termin',
   'Total'                       => 'Total',
   'Unit'                        => 'Satuan',

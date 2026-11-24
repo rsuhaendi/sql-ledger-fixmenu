@@ -1935,6 +1935,7 @@ sub customers_for_export {
 
   while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
     for (qw(address1 address2 city state zipcode country)) { $ref->{$_} ||= "" }
+    $ref->{taxincluded} = ($ref->{taxincluded} =~ /^(t|true|1|y|yes)$/i) ? 1 : 0;
     push @{ $form->{TR} }, $ref;
   }
 

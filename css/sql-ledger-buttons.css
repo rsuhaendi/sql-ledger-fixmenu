@@ -208,6 +208,11 @@ body.menu {
   text-decoration: none;
 }
 
+.isp-select-all {
+  color: #00c853;
+  font-weight: bold;
+}
+
 body.menu {
   margin: 4px;
 }

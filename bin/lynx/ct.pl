@@ -460,8 +460,9 @@ sub include_in_report {
 
   my @isp = ();
   if ($form->{db} eq 'customer') {
-    push @isp, qq|<input type=checkbox class=checkbox name=l_isp_all value=Y onclick="CheckISP(this.checked)"> <span class=small>|.$locale->text('Pilih semua').qq|</span>|;
+    push @isp, qq|<input type=checkbox class=checkbox name=l_isp_all value=Y onclick="CheckISP(this.checked)"> <span class="small isp-select-all">|.$locale->text('Pilih semua').qq|</span>|;
     push @isp, qq|<input name="l_billing_type" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_billing_type}> |.$locale->text('Jenis Pembayaran');
+    push @isp, qq|<input name="l_employee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_employee}> |.$locale->text('Salesperson');
     push @isp, qq|<input name="l_site" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_site}> |.$locale->text('Site');
     push @isp, qq|<input name="l_ktp" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_ktp}> |.$locale->text('No. KTP');
     push @isp, qq|<input name="l_coordinate" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Titik Koordinat');
@@ -476,7 +477,6 @@ sub include_in_report {
     push @isp, qq|<input name="l_bandwidth" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Bandwidth (Mbps)');
     push @isp, qq|<input name="l_registration_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Registrasi');
     push @isp, qq|<input name="l_monthly_fee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Biaya Bulanan');
-    push @isp, qq|<input name="l_employee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_employee}> |.$locale->text('Salesperson');
   }
 
   my $isp_js = '';
@@ -861,9 +861,9 @@ sub list_names {
                     bandwidth registration_fee monthly_fee) if $form->{db} eq 'customer';
 
   if ($form->{l_isp_all} eq 'Y') {
-    for (qw(billing_type site ktp coordinate odp_location pon cable_length
+    for (qw(billing_type employee site ktp coordinate odp_location pon cable_length
             signal_dbm device_type ip_address pppoe_username pppoe_password
-            bandwidth registration_fee monthly_fee employee)) {
+            bandwidth registration_fee monthly_fee)) {
       $form->{"l_$_"} = 'Y';
     }
   }

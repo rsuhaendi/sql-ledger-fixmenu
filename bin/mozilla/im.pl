@@ -3667,6 +3667,215 @@ Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\
 }
 
 
+sub export_chart_form {
+
+  $form->{nextsub} = "ex_chart";
+  $form->{action} = "continue";
+
+  $form->{reportcode} = "export_chart";
+  $form->{initreport} = 1;
+
+  $form->helpref("export_chart", $myconfig{countrycode});
+  $form->{dateformat} = $myconfig{dateformat};
+
+  $form->{filetype} ||= "csv";
+  $form->{$form->{filetype}} = 1;
+  $form->{UNIX} = 1;
+  $form->{delimiter} ||= ",";
+  $form->{decimalpoint} ||= ".";
+
+  $form->{header} = "checked" if $form->{includeheader};
+  $form->{stringsquoted} = "checked" if $form->{stringsquoted};
+
+  $form->header;
+
+  print qq|
+<body>
+<form method="post" name="main" action="$form->{script}">
+
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{helpref}$form->{title}</a></th>
+  </tr>
+  <tr height="5"></tr>
+  <tr>
+    <td>
+      <table>
+        <tr>
+          <th align=right>|.$locale->text('Type of File').qq|</th>
+          <td>
+            <input type=radio name=filetype value=csv $form->{csv}> $locale->text('csv')
+            <input type=radio name=filetype value=txt $form->{txt}> $locale->text('Fixed Length Text')
+          </td>
+        </tr>
+        <tr>
+          <th align=right>|.$locale->text('Delimiter').qq|</th>
+          <td><input name=delimiter size=3 value="$form->{delimiter}"></td>
+        </tr>
+        <tr>
+          <th align=right>|.$locale->text('Linefeed').qq|</th>
+          <td><select name=linefeed>UNIX,MAC,DOS,none</select></td>
+        </tr>
+        <tr>
+          <th align=right>|.$locale->text('Include in Report').qq|</th>
+          <td>
+            <input name=includeheader type=checkbox class=checkbox $form->{includeheader}> $locale->text('Include Header')
+            <input name=stringsquoted type=checkbox class=checkbox $form->{stringsquoted}> $locale->text('Strings quoted')
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr><td><hr size=3 noshade></td></tr>
+</table>
+
+<br>
+<input name=action class=submit type=submit value="$locale->text('Continue')">
+|;
+
+  $form->hide_form(qw(reportcode nextsub action initreport type login path));
+
+  $form->header;
+}
+
+
+sub ex_chart {
+
+  $form->retrieve_form(\%myconfig);
+
+  IM->charts_for_export(\%myconfig, \%$form);
+
+  $i = 0;
+  foreach my $ref (@{ $form->{TR} }) {
+    $i++;
+    $form->{"ndx_$i"} = $ref->{id};
+    $form->{"accno_$i"} = $ref->{accno};
+    $form->{"description_$i"} = $ref->{description};
+  }
+
+  $form->{rowcount} = $i;
+
+  $form->helpref("export_chart", $myconfig{countrycode});
+  $form->header;
+
+print qq|
+<body>
+<form method=post action=$form->{script}>
+
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{helpref}$form->{title}</a></th>
+  </tr>
+  <tr>
+    <td>
+      <table class=listheading width=100%>
+        <tr>
+          <th class=listheading>$locale->text('ID')</th>
+          <th class=listheading>$locale->text('Account')</th>
+          <th class=listheading>$locale->text('Description')</th>
+        </tr>
+|;
+
+  $j = 0;
+  foreach my $ref (@{ $form->{TR} }) {
+    $j++;
+    $odd = $j % 2;
+    print qq|<tr class=listrow$odd>|;
+    print qq|<td><input name="ndx_$j" type=checkbox class=checkbox value="$ref->{id}" checked></td>|;
+    print qq|<td>$ref->{accno}</td>|;
+    print qq|<td>$ref->{description}</td>|;
+    print qq|</tr>|;
+  }
+
+  print qq|
+      </table>
+    </td>
+  </tr>
+  <tr><td><hr size=3 noshade></td></tr>
+</table>
+
+<br>
+<input name=action class=submit type=submit value="$locale->text('Export Charts')">
+|;
+
+  $form->hide_form(qw(reportcode nextsub action type login path rowcount filetype delimiter linefeed includeheader stringsquoted));
+}
+
+
+sub export_charts {
+
+  IM->charts_for_export(\%myconfig, \%$form);
+
+  %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
+  $lf = $lf{$form->{linefeed}};
+
+  print OUT qq|Content-Type: application/file;
+Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\n|;
+
+  @column_index = ();
+  for (split /,/, $form->{column_index}) {
+    ($f, $n) = split /=/, $_;
+    $column_index{$f} = $n;
+    push @column_index, $f;
+  }
+
+  $i = 0;
+  foreach my $ref (@{ $form->{TR} }) {
+    $i++;
+    next unless $form->{"ndx_$i"};
+    foreach my $f (@column_index) {
+      $form->{"${f}_$i"} = $ref->{lc $f};
+    }
+  }
+  $form->{rowcount} = $i;
+
+  &export_chart_csv if $form->{filetype} eq 'csv';
+  &export_chart_txt if $form->{filetype} eq 'txt';
+
+}
+
+
+sub export_chart_csv {
+  @column_index = ();
+  for (split /,/, $form->{column_index}) {
+    ($f, $n) = split /=/, $_;
+    $column_index{$f} = $n;
+    push @column_index, $f;
+  }
+
+  %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
+  $lf = $lf{$form->{linefeed}} || "\n";
+
+  if ($form->{includeheader}) {
+    $line = join(", ", @column_index);
+    print OUT "$line$lf";
+  }
+
+  for $i (1 .. $form->{rowcount}) {
+    $line = join(",", map { $form->{"${_}_$i"} || "" } @column_index);
+    print OUT "$line$lf";
+  }
+}
+
+
+sub export_chart_txt {
+  @column_index = ();
+  for (split /,/, $form->{column_index}) {
+    ($f, $n) = split /=/, $_;
+    $column_index{$f} = $n;
+    push @column_index, $f;
+  }
+
+  for $i (1 .. $form->{rowcount}) {
+    foreach my $f (@column_index) {
+      my $val = $form->{"${f}_$i"} || "";
+      print OUT "$val ";
+    }
+    print OUT "\n";
+  }
+}
+
+
 sub continue { &{ $form->{nextsub} } };
 
 

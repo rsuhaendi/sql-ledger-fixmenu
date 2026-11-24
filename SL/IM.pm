@@ -1987,5 +1987,24 @@ sub customers_for_export {
 }
 
 
+sub charts_for_export {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect($myconfig);
+
+  my $query = qq|SELECT c.* FROM chart c ORDER BY c.accno|;
+  my $sth = $dbh->prepare($query) || $form->dberror($query);
+  $sth->execute || $form->dberror($query);
+
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    push @{ $form->{TR} }, $ref;
+  }
+
+  $sth->finish;
+  $dbh->disconnect;
+
+}
+
+
 1;
 

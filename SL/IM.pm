@@ -832,7 +832,32 @@ sub import_vc {
         }
       }
 
-      for (qw(employee business pricegroup paymentmethod)) {
+      if ($newform->{employee}) {
+        my $salesperson = $newform->{employee};
+        $salesperson =~ s/^\s+//;
+        $salesperson =~ s/\s+$//;
+        $newform->{employee} = $salesperson;
+
+        $query = qq|SELECT id FROM employee
+                    WHERE lower(name) = lower(|.$dbh->quote($salesperson).qq|)
+                    ORDER BY id DESC LIMIT 1|;
+        ($var) = $dbh->selectrow_array($query);
+
+        if (! $var) {
+          $query = qq|INSERT INTO employee (name, sales)
+                      VALUES (|.$dbh->quote($salesperson).qq|, 't')|;
+          $dbh->do($query) || $form->dberror($query);
+
+          $query = qq|SELECT id FROM employee
+                      WHERE name = |.$dbh->quote($salesperson).qq|
+                      ORDER BY id DESC LIMIT 1|;
+          ($var) = $dbh->selectrow_array($query);
+        }
+
+        $newform->{employee} = "--$var";
+      }
+
+      for (qw(business pricegroup paymentmethod)) {
         $query = qq|SELECT id FROM $_
               WHERE $link{$_}{fld} = '$newform->{$_}'|;
         ($var) = $dbh->selectrow_array($query);

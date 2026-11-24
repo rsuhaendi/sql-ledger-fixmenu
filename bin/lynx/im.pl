@@ -1710,6 +1710,12 @@ sub im_vc {
   if (my $site_xref = delete $form->{$form->{type}}{Site}) {
     $form->{$form->{type}}{site} ||= $site_xref;
   }
+
+  for my $alias (qw(Salesperson Sales_Person Salesperson_Name salesperson)) {
+    if (my $employee_xref = delete $form->{$form->{type}}{$alias}) {
+      $form->{$form->{type}}{employee} ||= $employee_xref;
+    }
+  }
     
   @column_index = qw(runningnumber ndx);
 

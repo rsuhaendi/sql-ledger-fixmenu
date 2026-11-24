@@ -3742,7 +3742,7 @@ sub export_chart_form {
 </table>
 
 <br>
-<input name=action class=submit type=submit value="$locale->text('Continue')">
+<input name=action class=submit type=submit value="|.$locale->text('Continue').qq|">
 |;
 
   $form->hide_form(qw(reportcode nextsub action initreport type login path));

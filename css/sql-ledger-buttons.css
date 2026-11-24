@@ -203,7 +203,7 @@ body.menu {
 
 .menuActive a,
 .menuActive a:hover {
-  color: #999999;
+  color: #00c853;
   cursor: pointer;
   text-decoration: none;
 }

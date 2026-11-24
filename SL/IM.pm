@@ -1988,11 +1988,20 @@ sub customers_for_export {
 
 
 sub charts_for_export {
-  my ($self, $myconfig, $form) = @_;
+  my ($self, $myconfig, $form, $filter) = @_;
 
   my $dbh = $form->dbconnect($myconfig);
 
-  my $query = qq|SELECT c.* FROM chart c ORDER BY c.accno|;
+  my $query = qq|SELECT c.* FROM chart c|;
+  my @where;
+  if ($filter && $filter ne '') {
+    push @where, qq|c.accno ILIKE '%$filter%' OR c.description ILIKE '%$filter%'|;
+  }
+  if (@where) {
+    $query .= " WHERE " . join(" AND ", @where);
+  }
+  $query .= qq| ORDER BY c.accno|;
+
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute || $form->dberror($query);
 

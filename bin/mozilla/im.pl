@@ -180,11 +180,13 @@ sub import {
 sub export {
 
   %title = ( payment  => 'Payments',
-             customer => 'Customers'
+             customer => 'Customers',
+             chart    => 'Chart Of Account'
 	   );
 
 # $locale->text('Export Payments')
 # $locale->text('Export Customers')
+# $locale->text('Export Chart Of Account')
 
   $form->{filename} ||= time;
 
@@ -193,6 +195,11 @@ sub export {
 
   if ($form->{type} eq 'customer') {
     &export_customer_form;
+    return;
+  }
+
+  if ($form->{type} eq 'chart') {
+    &export_chart_form;
     return;
   }
   
@@ -3684,10 +3691,12 @@ sub export_chart_form {
   $form->{delimiter} ||= ",";
   $form->{decimalpoint} ||= ".";
 
-  $form->{header} = "checked" if $form->{includeheader};
   $form->{stringsquoted} = "checked" if $form->{stringsquoted};
+  $form->{tabdelimited} = "checked" if $form->{tabdelimited};
 
   $form->header;
+
+  $selectlinefeed = $form->select_option("UNIX\nMAC\nDOS\n", $form->{linefeed} || "UNIX");
 
   print qq|
 <body>
@@ -3704,24 +3713,27 @@ sub export_chart_form {
         <tr>
           <th align=right>|.$locale->text('Type of File').qq|</th>
           <td>
-            <input type=radio name=filetype value=csv $form->{csv}> $locale->text('csv')
-            <input type=radio name=filetype value=txt $form->{txt}> $locale->text('Fixed Length Text')
+            <table>
+              <tr>
+                <td><input name=filetype type=radio class=radio value=csv $form->{csv}>&nbsp;|.$locale->text('csv').qq|</td>
+                <td>|.$locale->text('Delimiter').qq|&nbsp;<input name=delimiter size=2 value="$form->{delimiter}"></td>
+                <td><input name=tabdelimited type=checkbox class=checkbox $form->{tabdelimited}>&nbsp;|.$locale->text('Tab delimited').qq|</td>
+                <td><input name=includeheader type=checkbox class=checkbox $form->{includeheader}>&nbsp;|.$locale->text('Include Header').qq|</td>
+                <td><input name=stringsquoted type=checkbox class=checkbox $form->{stringsquoted}>&nbsp;|.$locale->text('Strings quoted').qq|</td>
+              </tr>
+              <tr>
+                <td><input name=filetype type=radio class=radio value=txt $form->{txt}>&nbsp;|.$locale->text('Fixed Length Text').qq|</td>
+              </tr>
+            </table>
           </td>
-        </tr>
-        <tr>
-          <th align=right>|.$locale->text('Delimiter').qq|</th>
-          <td><input name=delimiter size=3 value="$form->{delimiter}"></td>
         </tr>
         <tr>
           <th align=right>|.$locale->text('Linefeed').qq|</th>
-          <td><select name=linefeed>UNIX,MAC,DOS,none</select></td>
+          <td><select name=linefeed>$selectlinefeed</select></td>
         </tr>
         <tr>
-          <th align=right>|.$locale->text('Include in Report').qq|</th>
-          <td>
-            <input name=includeheader type=checkbox class=checkbox $form->{includeheader}> $locale->text('Include Header')
-            <input name=stringsquoted type=checkbox class=checkbox $form->{stringsquoted}> $locale->text('Strings quoted')
-          </td>
+          <th align=right>|.$locale->text('Decimal Point').qq|</th>
+          <td><input name=decimalpoint size=2 value="$form->{decimalpoint}"></td>
         </tr>
       </table>
     </td>
@@ -3734,8 +3746,6 @@ sub export_chart_form {
 |;
 
   $form->hide_form(qw(reportcode nextsub action initreport type login path));
-
-  $form->header;
 }
 
 
@@ -3743,7 +3753,8 @@ sub ex_chart {
 
   $form->retrieve_form(\%myconfig);
 
-  IM->charts_for_export(\%myconfig, \%$form);
+  my $filter = $form->{accno} || $form->{account};
+  IM->charts_for_export(\%myconfig, \%$form, $filter);
 
   $i = 0;
   foreach my $ref (@{ $form->{TR} }) {
@@ -3751,6 +3762,7 @@ sub ex_chart {
     $form->{"ndx_$i"} = $ref->{id};
     $form->{"accno_$i"} = $ref->{accno};
     $form->{"description_$i"} = $ref->{description};
+    $form->{"category_$i"} = $ref->{category};
   }
 
   $form->{rowcount} = $i;
@@ -3768,23 +3780,43 @@ print qq|
   </tr>
   <tr>
     <td>
-      <table class=listheading width=100%>
+      <table>
         <tr>
-          <th class=listheading>$locale->text('ID')</th>
-          <th class=listheading>$locale->text('Account')</th>
-          <th class=listheading>$locale->text('Description')</th>
+          <th align=right>|.$locale->text('Filter').qq|</th>
+          <td>
+            <input name=accno size=10 value="$form->{accno}" placeholder="|.$locale->text('Search account').qq|">
+            <input name=action class=submit type=submit value="|.$locale->text('Filter').qq|">
+          </td>
+        </tr>
+        <tr><td><hr size=1 noshade></td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <table class=listwidth width=100%>
+        <tr class=listheading>
+          <th class=listheading></th>
+          <th class=listheading>|.$locale->text('Account').qq|</th>
+          <th class=listheading>|.$locale->text('Description').qq|</th>
+          <th class=listheading>|.$locale->text('Category').qq|</th>
         </tr>
 |;
 
   $j = 0;
   foreach my $ref (@{ $form->{TR} }) {
     $j++;
-    $odd = $j % 2;
+    my $odd = $j % 2;
     print qq|<tr class=listrow$odd>|;
-    print qq|<td><input name="ndx_$j" type=checkbox class=checkbox value="$ref->{id}" checked></td>|;
-    print qq|<td>$ref->{accno}</td>|;
+    print qq|<td nowrap><input name="ndx_$j" type=checkbox class=checkbox value="$ref->{id}" checked></td>|;
+    print qq|<td nowrap>$ref->{accno}</td>|;
     print qq|<td>$ref->{description}</td>|;
+    print qq|<td nowrap>$ref->{category}</td>|;
     print qq|</tr>|;
+  }
+
+  if (! $i) {
+    print qq|<tr><td colspan=4>|.$locale->text('No records found').qq|</td></tr>|;
   }
 
   print qq|
@@ -3795,19 +3827,23 @@ print qq|
 </table>
 
 <br>
-<input name=action class=submit type=submit value="$locale->text('Export Charts')">
+<input name=action class=submit type=submit value="|.$locale->text('Export Charts').qq|">
+<input name=continue type=submit value="|.$locale->text('Continue').qq|">
 |;
 
-  $form->hide_form(qw(reportcode nextsub action type login path rowcount filetype delimiter linefeed includeheader stringsquoted));
+  $form->hide_form(qw(reportcode nextsub action type login path rowcount filetype delimiter linefeed includeheader stringsquoted accno account));
 }
 
 
 sub export_charts {
 
-  IM->charts_for_export(\%myconfig, \%$form);
+  my $filter = $form->{accno} || $form->{account};
+  IM->charts_for_export(\%myconfig, \%$form, $filter);
+
+  $form->{filename} ||= "chart_of_accounts" . ($filter ? "_" . $filter : "");
 
   %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
-  $lf = $lf{$form->{linefeed}};
+  $lf = $lf{$form->{linefeed}} || "\n";
 
   print OUT qq|Content-Type: application/file;
 Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\n|;
@@ -3815,7 +3851,6 @@ Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\
   @column_index = ();
   for (split /,/, $form->{column_index}) {
     ($f, $n) = split /=/, $_;
-    $column_index{$f} = $n;
     push @column_index, $f;
   }
 

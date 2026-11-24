@@ -3836,6 +3836,7 @@ print qq|
 </table>
 
 <br>
+<input type="hidden" name="nextsub" value="export_charts">
 <input name=action class=submit type=submit value="|.$locale->text('Export Charts').qq|">
 |;
 

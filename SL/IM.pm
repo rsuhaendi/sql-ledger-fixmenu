@@ -841,6 +841,23 @@ sub import_vc {
 
       for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
 
+      if ($newform->{db} eq 'customer' && $newform->{site}) {
+        my $site = $newform->{site};
+        $site =~ s/^\s+//;
+        $site =~ s/\s+$//;
+        $newform->{site} = $site;
+
+        my $query_site = qq|SELECT id FROM site
+                            WHERE site = |.$dbh->quote($site);
+        my ($site_id) = $dbh->selectrow_array($query_site);
+
+        if (! $site_id) {
+          $query_site = qq|INSERT INTO site (site)
+                           VALUES (|.$dbh->quote($site).qq|)|;
+          $dbh->do($query_site) || $form->dberror($query_site);
+        }
+      }
+
       CT->save($myconfig, $newform, $dbh);
       
       if ($new) {

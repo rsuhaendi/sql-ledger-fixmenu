@@ -58,6 +58,7 @@ $self{texts} = {
   'Qty'                         => 'Banyak',
   'Reference'                   => 'Referensi',
   'Salesperson'                 => 'Salesman',
+  'Site'                        => 'Site',
   'Source'                      => 'Bukti',
   'Startdate'                   => 'Tanggal Mulai',
   'State'                       => 'Negara Bagian',

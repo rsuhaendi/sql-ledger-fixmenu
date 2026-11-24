@@ -1706,6 +1706,10 @@ sub im_vc {
   for (qw(type login path)) { $form->{callback} .= "&$_=$form->{$_}" }
 
   &xrefhdr;
+
+  if (my $site_xref = delete $form->{$form->{type}}{Site}) {
+    $form->{$form->{type}}{site} ||= $site_xref;
+  }
     
   @column_index = qw(runningnumber ndx);
 
@@ -1724,6 +1728,7 @@ sub im_vc {
   $column_data{zipcode} = $locale->text('Zipcode');
   $column_data{state} = $locale->text('State');
   $column_data{country} = $locale->text('Country');
+  $column_data{site} = $locale->text('Site');
   $column_data{cc} = $locale->text('Cc');
   $column_data{bcc} = $locale->text('Bcc');
   $column_data{notes} = $locale->text('Notes');

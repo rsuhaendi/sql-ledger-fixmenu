@@ -3834,10 +3834,9 @@ print qq|
 
 <br>
 <input name=action class=submit type=submit value="|.$locale->text('Export Charts').qq|">
-<input name=continue type=submit value="|.$locale->text('Continue').qq|">
 |;
 
-  $form->hide_form(qw(reportcode nextsub action type login path rowcount filetype delimiter linefeed includeheader stringsquoted accno account));
+  $form->hide_form(qw(reportcode nextsub type login path rowcount filetype delimiter linefeed includeheader stringsquoted accno account));
 }
 
 

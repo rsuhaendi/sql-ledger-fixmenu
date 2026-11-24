@@ -3691,8 +3691,14 @@ sub export_chart_form {
   $form->{delimiter} ||= ",";
   $form->{decimalpoint} ||= ".";
 
-  $form->{stringsquoted} = "checked" if $form->{stringsquoted};
+  # Convert numeric values to "checked" for HTML
+  $form->{csv} = "checked" if $form->{csv};
+  $form->{txt} = "checked" if $form->{txt};
+  $form->{UNIX} = "checked" if $form->{UNIX};
+  $form->{MAC} = "checked" if $form->{MAC};
+  $form->{DOS} = "checked" if $form->{DOS};
   $form->{tabdelimited} = "checked" if $form->{tabdelimited};
+  $form->{stringsquoted} = "checked" if $form->{stringsquoted};
 
   $form->header;
 

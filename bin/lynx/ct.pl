@@ -497,7 +497,6 @@ sub search {
   
   for (qw(name contact phone email)) { $form->{"l_$_"} = 'checked' }
   $form->{l_site} = 'checked' if $form->{db} eq 'customer';
-  $form->{l_billing_type} = 'checked' if $form->{db} eq 'customer';
 
   $form->{nextsub} = "list_names";
 

@@ -15,6 +15,48 @@ sub setting_db {
     ? $value : 10;
 }
 
+sub employees {
+  my ($self, $myconfig, $form) = @_;
+
+  $form->{CM_employees} = [];
+
+  my $dbh = $form->dbconnect($myconfig);
+  my $sth = $dbh->prepare(qq|
+    SELECT id, name FROM employee
+    WHERE sales = '1' AND (enddate IS NULL OR enddate >= CURRENT_DATE)
+    ORDER BY name
+  |) || $form->dberror(qq|SELECT id, name FROM employee|);
+  $sth->execute;
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    push @{ $form->{CM_employees} }, $ref;
+  }
+  $sth->finish;
+  $dbh->disconnect;
+}
+
+sub period {
+  my ($self, $myconfig, $form, $date, $billing_type) = @_;
+
+  return '' unless $date;
+
+  my $iso = $date;
+  $iso =~ s/\D//g;
+  return '' unless $iso =~ /^\d{8}$/;
+
+  my $start = $iso;
+  my $end = $form->add_date($myconfig, $form->add_date($myconfig, $start, 1, 'month'), -1, 'day');
+
+  if ($billing_type && $billing_type eq 'Pascabayar') {
+    $start = $form->add_date($myconfig, $iso, -1, 'month');
+    $end = $form->add_date($myconfig, $iso, -1, 'day');
+  }
+
+  for ($start, $end) { s/\D//g }
+
+  return $form->format_date($myconfig->{dateformat}, $start)
+    .' s/d '.$form->format_date($myconfig->{dateformat}, $end);
+}
+
 sub setting {
   my ($self, $myconfig, $form) = @_;
 
@@ -127,7 +169,13 @@ sub post_pending {
 sub report {
   my ($self, $myconfig, $form) = @_;
 
+  $form->{CM_summary} = [];
+  $form->{CM_detail} = [];
+
   my $dbh = $form->dbconnect($myconfig);
+
+  my ($employee_id) = split /--/, ($form->{employee_id} || '');
+  $employee_id *= 1;
 
   my $where = '';
   if ($form->{fromdate}) {
@@ -135,6 +183,9 @@ sub report {
   }
   if ($form->{todate}) {
     $where .= " AND a.datepaid <= ".$dbh->quote($form->{todate});
+  }
+  if ($employee_id) {
+    $where .= " AND a.employee_id = $employee_id";
   }
 
   my $query = qq|
@@ -159,10 +210,13 @@ sub report {
   $sth->finish;
 
   $query = qq|
-    SELECT a.datepaid, a.invnumber, e.name, a.commission_amount AS gross,
+    SELECT a.datepaid, a.transdate, a.invnumber, e.name AS employee,
+           cu.name AS customer, cu.billing_type,
+           a.commission_amount AS gross,
            a.commission_deduction AS deduction, a.commission_net AS net
     FROM ar a
     JOIN employee e ON (e.id = a.employee_id)
+    LEFT JOIN customer cu ON (cu.id = a.customer_id)
     WHERE a.commission_posted = true
       AND a.paid >= a.amount
       $where
@@ -171,6 +225,13 @@ sub report {
   $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute;
   while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    $ref->{period} = $self->period($myconfig, $form, $ref->{transdate}, $ref->{billing_type});
+    for (qw(datepaid transdate)) {
+      my $iso = $ref->{$_} || '';
+      $iso =~ s/\D//g;
+      $ref->{$_} = $iso =~ /^\d{8}$/
+        ? $form->format_date($myconfig->{dateformat}, $iso) : '';
+    }
     push @{ $form->{CM_detail} }, $ref;
   }
   $sth->finish;

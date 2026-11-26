@@ -461,6 +461,8 @@ sub prepare_employee {
 
   HR->get_employee(\%myconfig, \%$form);
 
+  $form->{commission_amount} = $form->format_amount(\%myconfig, $form->{commission_amount}, ($form->{precision} || 2));
+
   for (keys %$form) { $form->{$_} = $form->quote($form->{$_}) }
   
   for $key (qw(wage deduction acsrole paymentmethod)) {

@@ -3266,6 +3266,12 @@ sub update_employee {
   $form->redo_rows(\@flds, \@f, $count, $form->{wage_rows});
   $form->{wage_rows} = $count;
 
+  $form->{commission_amount} = $form->format_amount(
+    \%myconfig,
+    $form->parse_amount(\%myconfig, $form->{commission_amount}),
+    ($form->{precision} || 2)
+  );
+
   HR->isadmin(\%myconfig, \%$form);
 
 }

@@ -177,12 +177,13 @@ sub report {
   my ($employee_id) = split /--/, ($form->{employee_id} || '');
   $employee_id *= 1;
 
+  my $datefield = 'COALESCE(a.datepaid, a.transdate)';
   my $where = '';
   if ($form->{fromdate}) {
-    $where .= " AND a.datepaid >= ".$dbh->quote($form->{fromdate});
+    $where .= " AND $datefield >= ".$dbh->quote($form->{fromdate});
   }
   if ($form->{todate}) {
-    $where .= " AND a.datepaid <= ".$dbh->quote($form->{todate});
+    $where .= " AND $datefield <= ".$dbh->quote($form->{todate});
   }
   if ($employee_id) {
     $where .= " AND a.employee_id = $employee_id";
@@ -196,7 +197,8 @@ sub report {
            sum(a.commission_net) AS net
     FROM ar a
     JOIN employee e ON (e.id = a.employee_id)
-    WHERE a.commission_posted = true
+    WHERE a.invoice = true
+      AND a.commission_posted = true
       AND a.paid >= a.amount
       $where
     GROUP BY e.id, e.name, e.commission_amount
@@ -212,17 +214,18 @@ sub report {
   $query = qq|
     SELECT a.datepaid, a.transdate, a.invnumber, e.name AS employee,
            ad.address1, ad.address2, ad.city, ad.state, ad.zipcode, ad.country,
-           cu.name AS customer, cu.billing_type,
-           a.commission_amount AS gross,
-           a.commission_deduction AS deduction, a.commission_net AS net
+           cu.id AS customer_id, cu.name AS customer, cu.billing_type,
+           CASE WHEN a.paid >= a.amount THEN 'Paid' ELSE 'Unpaid' END AS paid_status,
+           CASE WHEN a.commission_posted = true THEN a.commission_amount ELSE 0 END AS gross,
+           CASE WHEN a.commission_posted = true THEN a.commission_deduction ELSE 0 END AS deduction,
+           CASE WHEN a.commission_posted = true THEN a.commission_net ELSE 0 END AS net
     FROM ar a
     JOIN employee e ON (e.id = a.employee_id)
     LEFT JOIN address ad ON (ad.trans_id = e.id)
     LEFT JOIN customer cu ON (cu.id = a.customer_id)
-    WHERE a.commission_posted = true
-      AND a.paid >= a.amount
+    WHERE a.invoice = true
       $where
-    ORDER BY e.name, a.datepaid, a.invnumber
+    ORDER BY e.name, $datefield, a.invnumber
   |;
   $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute;

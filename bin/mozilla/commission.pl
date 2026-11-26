@@ -34,12 +34,13 @@ sub prepare_data {
 
   for my $key (qw(cm_summary_name cm_summary_rate cm_summary_invoices
                   cm_summary_gross cm_summary_deduction cm_summary_net
+                  cm_group_name cm_group_address cm_group_customercount
+                  cm_group_paidcount cm_group_unpaidcount
                   cm_detail_customer cm_detail_invoice cm_detail_period
-                  cm_detail_transdate cm_detail_paiddate cm_detail_gross
-                  cm_detail_deduction cm_detail_net cm_detail_subtotal
-                  cm_detail_row cm_detail_grand cm_detail_name
-                  cm_detail_group cm_detail_groupname
-                  cm_detail_groupaddress cm_detail_groupcount)) {
+                  cm_detail_transdate cm_detail_paiddate cm_detail_status
+                  cm_detail_gross cm_detail_deduction cm_detail_net
+                  cm_detail_subtotal cm_detail_row cm_detail_grand
+                  cm_detail_name)) {
     $form->{$key} = [];
   }
 
@@ -71,13 +72,6 @@ sub prepare_data {
   $form->{cm_total_deduction} = fmt_amount($total_deduction);
   $form->{cm_total_net} = fmt_amount($total_net);
 
-  my %counts;
-  for my $ref (@{ $form->{CM_detail} }) { $counts{$ref->{employee}}++ }
-
-  my $current = '';
-  my %sub;
-  my $d = 0;
-
   my $address = sub {
     my ($ref) = @_;
     my $value = join ', ', grep { $_ ne '' } (
@@ -86,14 +80,53 @@ sub prepare_data {
     return $value || '-';
   };
 
+  my %groups;
+  my @group_order;
+  for my $ref (@{ $form->{CM_detail} }) {
+    my $name = $ref->{employee} || '';
+    unless ($groups{$name}) {
+      $groups{$name} = {
+        address => &$address($ref),
+        customers => {},
+        paid => 0,
+        unpaid => 0,
+      };
+      push @group_order, $name;
+    }
+    my $customer = $ref->{customer_id} || $ref->{customer} || '';
+    $groups{$name}{customers}{$customer} = 1 if $customer ne '';
+    if (($ref->{paid_status} || '') eq 'Paid') {
+      $groups{$name}{paid}++;
+    } else {
+      $groups{$name}{unpaid}++;
+    }
+  }
+
+  my $gi = 0;
+  for my $name (@group_order) {
+    my $group = $groups{$name};
+    $form->{cm_group_name}[$gi] = text_val($name);
+    $form->{cm_group_address}[$gi] = text_val($group->{address});
+    $form->{cm_group_customercount}[$gi] = scalar keys %{ $group->{customers} };
+    $form->{cm_group_paidcount}[$gi] = $group->{paid};
+    $form->{cm_group_unpaidcount}[$gi] = $group->{unpaid};
+    $gi++;
+  }
+
+  my $current = '';
+  my %sub;
+  my $d = 0;
+
   my $flush_subtotal = sub {
-    return unless $sub{invoices};
+    return unless $sub{rows};
 
     $form->{cm_detail_subtotal}[$d] = 1;
     $form->{cm_detail_row}[$d] = 0;
     $form->{cm_detail_grand}[$d] = 0;
+    $form->{cm_detail_customer}[$d] = '';
+    $form->{cm_detail_status}[$d] = '';
     $form->{cm_detail_name}[$d] = text_val($current);
-    $form->{cm_detail_invoice}[$d] = $sub{invoices};
+    $form->{cm_detail_invoice}[$d] = $sub{paid};
     $form->{cm_detail_gross}[$d] = fmt_amount($sub{gross});
     $form->{cm_detail_deduction}[$d] = fmt_amount($sub{deduction});
     $form->{cm_detail_net}[$d] = fmt_amount($sub{net});
@@ -105,34 +138,33 @@ sub prepare_data {
 
   for my $ref (@{ $form->{CM_detail} }) {
     my $cut = $ref->{gross} - $ref->{net};
+    my $paid = (($ref->{paid_status} || '') eq 'Paid') ? 1 : 0;
 
     if ($ref->{employee} ne $current) {
       &$flush_subtotal;
       $current = $ref->{employee};
     }
 
-    $sub{invoices}++;
+    $sub{rows}++;
+    $sub{paid} += $paid;
     $sub{gross} += $ref->{gross};
     $sub{deduction} += $cut;
     $sub{net} += $ref->{net};
 
-    $all_invoices++;
     $all_gross += $ref->{gross};
     $all_deduction += $cut;
     $all_net += $ref->{net};
+    $all_invoices += $paid;
 
     $form->{cm_detail_subtotal}[$d] = 0;
     $form->{cm_detail_row}[$d] = 1;
     $form->{cm_detail_grand}[$d] = 0;
-    $form->{cm_detail_group}[$d] = ($sub{invoices} == 1) ? 1 : 0;
-    $form->{cm_detail_groupname}[$d] = text_val($ref->{employee});
-    $form->{cm_detail_groupaddress}[$d] = text_val(&$address($ref));
-    $form->{cm_detail_groupcount}[$d] = $counts{$ref->{employee}} || 0;
     $form->{cm_detail_customer}[$d] = text_val($ref->{customer});
     $form->{cm_detail_invoice}[$d] = text_val($ref->{invnumber});
     $form->{cm_detail_period}[$d] = text_val($ref->{period});
     $form->{cm_detail_transdate}[$d] = text_val($ref->{transdate});
-    $form->{cm_detail_paiddate}[$d] = text_val($ref->{datepaid});
+    $form->{cm_detail_paiddate}[$d] = text_val($ref->{datepaid} || '-');
+    $form->{cm_detail_status}[$d] = text_val($ref->{paid_status} || 'Unpaid');
     $form->{cm_detail_gross}[$d] = fmt_amount($ref->{gross});
     $form->{cm_detail_deduction}[$d] = fmt_amount($cut);
     $form->{cm_detail_net}[$d] = fmt_amount($ref->{net});
@@ -144,6 +176,8 @@ sub prepare_data {
   $form->{cm_detail_subtotal}[$d] = 0;
   $form->{cm_detail_row}[$d] = 0;
   $form->{cm_detail_grand}[$d] = 1;
+  $form->{cm_detail_customer}[$d] = '';
+  $form->{cm_detail_status}[$d] = '';
   $form->{cm_detail_invoice}[$d] = $all_invoices;
   $form->{cm_detail_gross}[$d] = fmt_amount($all_gross);
   $form->{cm_detail_deduction}[$d] = fmt_amount($all_deduction);
@@ -268,13 +302,12 @@ sub generate {
   $media =~ s/(<option value="\Q$form->{media}\E")/$1 selected/;
 
   print qq|
-<table width=100%>
+<table>
   <tr>
-    <th align=right nowrap>|.$locale->text('Format').qq|</th>
-    <td><select name=format>$formats</select></td>
-    <th align=right nowrap>|.$locale->text('Media').qq|</th>
-    <td><select name=media>$media</select></td>
-    <td>&nbsp;</td>
+    <th align=left nowrap>|.$locale->text('Format').qq|</th>
+    <td align=left><select name=format>$formats</select></td>
+    <th align=left nowrap>|.$locale->text('Media').qq|</th>
+    <td align=left><select name=media>$media</select></td>
   </tr>
 </table>
 |;
@@ -322,6 +355,18 @@ sub render_report {
 
   print qq|<p>$form->{cm_caption}</p>| if $form->{cm_caption};
 
+  for my $i (0 .. $#{ $form->{cm_group_name} }) {
+    print qq|
+<p>
+  <b>|.$locale->text('Salesperson').qq|: $form->{cm_group_name}[$i]</b>
+  &nbsp;|.$locale->text('Address').qq|: $form->{cm_group_address}[$i]
+  &nbsp;|.$locale->text('Total Customer').qq|: $form->{cm_group_customercount}[$i]
+  &nbsp;|.$locale->text('Total Invoice Paid').qq|: $form->{cm_group_paidcount}[$i]
+  &nbsp;|.$locale->text('Total Invoice Unpaid').qq|: $form->{cm_group_unpaidcount}[$i]
+</p>
+|;
+  }
+
   print qq|
 <table width=100%>
   <tr class=listheading>
@@ -330,6 +375,7 @@ sub render_report {
     <th>|.$locale->text('Period').qq|</th>
     <th>|.$locale->text('Transaction Date').qq|</th>
     <th>|.$locale->text('Paid Date').qq|</th>
+    <th>|.$locale->text('Status Paid').qq|</th>
     <th align=right>|.$locale->text('Gross').qq|</th>
     <th align=right>|.$locale->text('Deduction').qq|</th>
     <th align=right>|.$locale->text('Net').qq|</th>
@@ -341,25 +387,13 @@ sub render_report {
               : $form->{cm_detail_subtotal}[$i] ? 'listsubtotal'
               : 'listrow'.($i % 2);
 
-    if ($form->{cm_detail_group}[$i]) {
-      print qq|
-  <tr class=listheading>
-    <td colspan=8>
-      |.$locale->text('Salesperson').qq|: <b>$form->{cm_detail_groupname}[$i]</b>
-      &nbsp;|.$locale->text('Address').qq|: $form->{cm_detail_groupaddress}[$i]
-      &nbsp;|.$locale->text('Total Invoice Paid').qq|: $form->{cm_detail_groupcount}[$i]
-    </td>
-  </tr>
-|;
-    }
-
     if ($form->{cm_detail_subtotal}[$i] || $form->{cm_detail_grand}[$i]) {
       my $label = $form->{cm_detail_grand}[$i]
         ? $locale->text('Total') : $locale->text('Subtotal');
 
       print qq|
   <tr class=$class>
-    <th colspan=5 align=right>$label&nbsp;</th>
+    <th colspan=6 align=right>$label&nbsp;</th>
     <th align=right>$form->{cm_detail_gross}[$i]</th>
     <th align=right>$form->{cm_detail_deduction}[$i]</th>
     <th align=right>$form->{cm_detail_net}[$i]</th>
@@ -373,6 +407,7 @@ sub render_report {
     <td>$form->{cm_detail_period}[$i]&nbsp;</td>
     <td>$form->{cm_detail_transdate}[$i]&nbsp;</td>
     <td>$form->{cm_detail_paiddate}[$i]&nbsp;</td>
+    <td>$form->{cm_detail_status}[$i]&nbsp;</td>
     <td align=right>$form->{cm_detail_gross}[$i]</td>
     <td align=right>$form->{cm_detail_deduction}[$i]</td>
     <td align=right>$form->{cm_detail_net}[$i]</td>

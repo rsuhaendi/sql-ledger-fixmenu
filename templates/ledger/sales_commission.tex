@@ -14,27 +14,28 @@
 
 \vspace{0.3cm}
 
-\noindent\begin{longtable}{|p{2.2cm}|p{2.8cm}|p{2.6cm}|p{2.1cm}|p{2.1cm}|r|r|r|}
+<%foreach cm_group_name%>
+\noindent\textbf{Salesperson: <%cm_group_name%>}, Address: <%cm_group_address%>, Total Customer: <%cm_group_customercount%>, Total Invoice Paid: <%cm_group_paidcount%>, Total Invoice Unpaid: <%cm_group_unpaidcount%>\par
+<%end cm_group_name%>
+
+\vspace{0.2cm}
+
+\noindent\begin{longtable}{|p{2.0cm}|p{1.6cm}|p{2.2cm}|p{1.7cm}|p{1.7cm}|p{1.4cm}|r|r|r|}
 \hline
-\textbf{Customer} & \textbf{Invoice} & \textbf{Period} & \textbf{Trans. Date} & \textbf{Paid Date} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
+\textbf{Customer} & \textbf{Invoice} & \textbf{Period} & \textbf{Trans. Date} & \textbf{Paid Date} & \textbf{Status Paid} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
 \hline
 \endhead
 
 <%foreach cm_detail_customer%>
-<%if cm_detail_group%>
-\hline
-\multicolumn{8}{|l|}{Salesperson: \textbf{<%cm_detail_groupname%>}, Address: <%cm_detail_groupaddress%>, Total Invoice Paid: <%cm_detail_groupcount%>} \\
-\hline
-<%end cm_detail_group%>
 <%if cm_detail_row%>
-<%cm_detail_customer%> & <%cm_detail_invoice%> & <%cm_detail_period%> & <%cm_detail_transdate%> & <%cm_detail_paiddate%> & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
+<%cm_detail_customer%> & <%cm_detail_invoice%> & <%cm_detail_period%> & <%cm_detail_transdate%> & <%cm_detail_paiddate%> & <%cm_detail_status%> & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
 <%end cm_detail_row%>
 <%if cm_detail_subtotal%>
-\multicolumn{5}{|r|}{Subtotal} & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
+\multicolumn{6}{|r|}{Subtotal} & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
 <%end cm_detail_subtotal%>
 <%if cm_detail_grand%>
 \hline
-\multicolumn{5}{|r|}{\textbf{Total}} & \textbf{<%cm_detail_gross%>} & \textbf{<%cm_detail_deduction%>} & \textbf{<%cm_detail_net%>} \\
+\multicolumn{6}{|r|}{\textbf{Total}} & \textbf{<%cm_detail_gross%>} & \textbf{<%cm_detail_deduction%>} & \textbf{<%cm_detail_net%>} \\
 \hline
 <%end cm_detail_grand%>
 <%end cm_detail_customer%>

@@ -20,6 +20,16 @@
 
 </table>
 
+<%foreach cm_group_name%>
+<p>
+  <b>Salesperson: <%cm_group_name%></b>
+  &nbsp;Address: <%cm_group_address%>
+  &nbsp;Total Customer: <%cm_group_customercount%>
+  &nbsp;Total Invoice Paid: <%cm_group_paidcount%>
+  &nbsp;Total Invoice Unpaid: <%cm_group_unpaidcount%>
+</p>
+<%end cm_group_name%>
+
 <table width=100%>
   <tr class=listheading>
     <th>Customer</th>
@@ -27,21 +37,13 @@
     <th>Period</th>
     <th>Transaction Date</th>
     <th>Paid Date</th>
+    <th>Status Paid</th>
     <th align=right>Gross</th>
     <th align=right>Deduction</th>
     <th align=right>Net</th>
   </tr>
 
 <%foreach cm_detail_customer%>
-<%if cm_detail_group%>
-  <tr class=listheading>
-    <td colspan=8>
-      Salesperson: <b><%cm_detail_groupname%></b>
-      &nbsp;Address: <%cm_detail_groupaddress%>
-      &nbsp;Total Invoice Paid: <%cm_detail_groupcount%>
-    </td>
-  </tr>
-<%end cm_detail_group%>
 <%if cm_detail_row%>
   <tr>
     <td><%cm_detail_customer%>&nbsp;</td>
@@ -49,6 +51,7 @@
     <td><%cm_detail_period%>&nbsp;</td>
     <td><%cm_detail_transdate%>&nbsp;</td>
     <td><%cm_detail_paiddate%>&nbsp;</td>
+    <td><%cm_detail_status%>&nbsp;</td>
     <td align=right><%cm_detail_gross%></td>
     <td align=right><%cm_detail_deduction%></td>
     <td align=right><%cm_detail_net%></td>
@@ -56,7 +59,7 @@
 <%end cm_detail_row%>
 <%if cm_detail_subtotal%>
   <tr class=listsubtotal>
-    <td colspan=5 align=right>Subtotal&nbsp;</td>
+    <td colspan=6 align=right>Subtotal&nbsp;</td>
     <td align=right><%cm_detail_gross%></td>
     <td align=right><%cm_detail_deduction%></td>
     <td align=right><%cm_detail_net%></td>
@@ -64,7 +67,7 @@
 <%end cm_detail_subtotal%>
 <%if cm_detail_grand%>
   <tr class=listtotal>
-    <th colspan=5 align=right>Total&nbsp;</th>
+    <th colspan=6 align=right>Total&nbsp;</th>
     <th align=right><%cm_detail_gross%></th>
     <th align=right><%cm_detail_deduction%></th>
     <th align=right><%cm_detail_net%></th>

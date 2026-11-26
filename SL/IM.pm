@@ -866,6 +866,19 @@ sub import_vc {
 
       for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
 
+      # Data lama hasil export sering hanya punya customer.name untuk pelanggan
+      # bertipe Person. Isi First/Last Name agar nama tetap tampil di Edit Customer
+      # tanpa mengubah logika form bawaan dan tanpa mengganti tipe menjadi Company.
+      if ($newform->{db} eq 'customer'
+          && $newform->{typeofcontact} ne 'company'
+          && $newform->{name}
+          && !$newform->{firstname} && !$newform->{lastname}) {
+        my @parts = split /\s+/, $newform->{name};
+        $newform->{firstname} = shift @parts;
+        $newform->{lastname} = join ' ', @parts;
+        $newform->{typeofcontact} ||= 'person';
+      }
+
       if ($newform->{db} eq 'customer' && $newform->{site}) {
         my $site = $newform->{site};
         $site =~ s/^\s+//;

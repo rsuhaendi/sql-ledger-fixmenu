@@ -598,6 +598,11 @@ sub search {
 	  <td><input name="billing_prabayar" type=checkbox class=checkbox value=Y checked>&nbsp;Prabayar
 	      &nbsp;<input name="billing_pascabayar" type=checkbox class=checkbox value=Y checked>&nbsp;Pascabayar</td>
 	</tr>
+        <tr>
+	  <th align=right nowrap>|.$locale->text('Tax').qq|</th>
+	  <td><input name="ppn_yes" type=checkbox class=checkbox value=Y checked>&nbsp;PPn 10%
+	      &nbsp;<input name="ppn_no" type=checkbox class=checkbox value=Y checked>&nbsp;Non PPn</td>
+	</tr>
 |;
   }
 

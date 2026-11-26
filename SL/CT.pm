@@ -751,6 +751,16 @@ sub search {
     if (@billing == 1) {
       $where .= " AND c.billing_type = $billing[0]";
     }
+
+    my @ppn;
+    push @ppn, 1 if $form->{ppn_yes};
+    push @ppn, 0 if $form->{ppn_no};
+    if (@ppn == 1) {
+      my $exists = qq|EXISTS (SELECT 1 FROM customertax ctx
+                       JOIN chart ch ON (ch.id = ctx.chart_id)
+                       WHERE ctx.customer_id = c.id AND ch.accno = '2310')|;
+      $where .= $ppn[0] ? " AND $exists" : " AND NOT $exists";
+    }
   }
   
   ($form->{transdatefrom}, $form->{transdateto}) = $form->from_to($form->{year}, $form->{month}, $form->{interval}) if $form->{year} && $form->{month};

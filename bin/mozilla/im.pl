@@ -3053,7 +3053,7 @@ sub export_customer_form {
 
   my $selectdateformat = "";
   for (qw(mm-dd-yy mm/dd/yy dd-mm-yy dd/mm/yy dd.mm.yy yyyy-mm-dd mmddyy ddmmyy yymmdd mmddyyyy ddmmyyyy yyyymmdd)) { $selectdateformat .= "$_\n" }
-  $form->{dateformat} = $myconfig{dateformat};
+  $form->{dateformat} = 'yyyy-mm-dd';
 
   $form->reports(\%myconfig);
 
@@ -3232,14 +3232,6 @@ if (document.addEventListener) {
           </td>
           <td>$includeinreport{dateprepared}->{html}</td>
         </tr>
-        <tr>
-          <th align="right">|.$locale->text('Date Format').qq|</th>
-          <td>
-            <select name=dateformat>|
-            .$form->select_option($selectdateformat, $form->{dateformat})
-            .qq|</select>
-          </td>
-        </tr>
       </table>
     </td>
   </tr>
@@ -3340,7 +3332,7 @@ if (document.addEventListener) {
 <input name=action class=submit type=submit value="|.$locale->text('Continue').qq|">
 |;
 
-  $form->hide_form(qw(initreport reportcode defaultcurrency title type action nextsub login path));
+  $form->hide_form(qw(initreport reportcode defaultcurrency title type action nextsub login path dateformat));
 
   $form->{flds} = "";
   for (sort { $includeinreport{$a}->{ndx} <=> $includeinreport{$b}->{ndx} } keys %includeinreport) { $form->{flds} .= "$_=$includeinreport{$_}->{label}," }

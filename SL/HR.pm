@@ -463,6 +463,7 @@ sub save_employee {
   for (qw(ap payment)) { ($form->{$_}) = split /--/, $form->{$_} }
   $form->{acsrole_id} ||= 'NULL';
   $form->{sales} *= 1;
+  $form->{commission_amount} = $form->parse_amount($myconfig, $form->{commission_amount});
   
   $employeelogin = ($form->{employeelogin}) ? $dbh->quote($form->{employeelogin}) : 'NULL';
 	      
@@ -478,6 +479,7 @@ sub save_employee {
 	      enddate = |.$form->dbquote($form->{enddate}, SQL_DATE).qq|,
 	      notes = |.$dbh->quote($form->{notes}).qq|,
 	      sales = '$form->{sales}',
+	      commission_amount = $form->{commission_amount},
 	      login = $employeelogin,
 	      email = |.$dbh->quote($form->{email}).qq|,
 	      ssn = '$form->{ssn}',

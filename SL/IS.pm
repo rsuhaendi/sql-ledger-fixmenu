@@ -15,6 +15,7 @@ package IS;
 
 use SL::PM;
 use SL::CP;
+use SL::CM;
   
 
 sub invoice_details {
@@ -1609,6 +1610,9 @@ sub post_invoice {
   $form->{name} = $form->{customer};
   $form->{name} =~ s/--$form->{customer_id}//;
   $form->add_shipto($dbh, $form->{id});
+
+  # post sales commission when this AR invoice is fully paid
+  CM->post_invoice($myconfig, $dbh, $form->{id});
 
   # save printed, emailed and queued
   $form->save_status($dbh);

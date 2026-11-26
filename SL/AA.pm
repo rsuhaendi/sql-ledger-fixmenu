@@ -14,6 +14,8 @@
 
 package AA;
 
+use SL::CM;
+
 
 sub post_transaction {
   my ($self, $myconfig, $form, $dbh) = @_;
@@ -538,6 +540,11 @@ sub post_transaction {
 	$dbh->do($query) || $form->dberror($query);
       }
     }
+  }
+
+  # post sales commission when an AR invoice is fully paid
+  if ($table eq 'ar') {
+    CM->post_invoice($myconfig, $dbh, $form->{id});
   }
 
   # save printed and queued

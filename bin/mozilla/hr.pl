@@ -603,6 +603,10 @@ sub employee_header {
 		<th align=right>|.$locale->text('Sales').qq|</th>
 		<td><input name=sales class=checkbox type=checkbox value=1 $sales></td>
 	      </tr>
+	      <tr>
+		<th align=right>|.$locale->text('Commission Amount').qq|</th>
+		<td><input name=commission_amount size=20 value="|.$form->quote($form->{commission_amount}).qq|"></td>
+	      </tr>
 |;
   } else {
     ($acsrole) = split /--/, $form->{acsrole};

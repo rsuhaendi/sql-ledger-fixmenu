@@ -1,5 +1,8 @@
 require "$form->{path}/arap.pl";
 
+# arap.pl defines a Preview routine for invoices; override it for this report.
+*preview = \&commission_preview;
+
 use SL::CM;
 
 1;
@@ -77,9 +80,10 @@ sub prepare_data {
 
   my $address = sub {
     my ($ref) = @_;
-    return join ', ', grep { $_ ne '' } (
+    my $value = join ', ', grep { $_ ne '' } (
       $ref->{address1}, $ref->{address2}, $ref->{city},
       $ref->{state}, $ref->{zipcode}, $ref->{country});
+    return $value || '-';
   };
 
   my $flush_subtotal = sub {
@@ -264,21 +268,24 @@ sub generate {
   $media =~ s/(<option value="\Q$form->{media}\E")/$1 selected/;
 
   print qq|
-<table>
+<table width=100%>
   <tr>
     <th align=right nowrap>|.$locale->text('Format').qq|</th>
     <td><select name=format>$formats</select></td>
-  </tr>
-  <tr>
     <th align=right nowrap>|.$locale->text('Media').qq|</th>
     <td><select name=media>$media</select></td>
+    <td>&nbsp;</td>
   </tr>
 </table>
 |;
 
   $form->hide_form(qw(nextsub path login title fromdate todate commission_deduction employee_id));
 
-  my %button = ('Print' => { ndx => 1, key => 'P', value => $locale->text('Print') });
+  my %button = (
+    'Preview' => { ndx => 1, key => 'V', value => $locale->text('Preview') },
+    'Print'   => { ndx => 2, key => 'P', value => $locale->text('Print') },
+    'Back'    => { ndx => 3, key => 'B', value => $locale->text('Back') },
+  );
   $form->print_button(\%button);
 
   print qq|
@@ -338,9 +345,9 @@ sub render_report {
       print qq|
   <tr class=listheading>
     <td colspan=8>
-      <b>$form->{cm_detail_groupname}[$i]</b>
-      $form->{cm_detail_groupaddress}[$i]
-      |.$locale->text('Total Invoice Paid').qq|: $form->{cm_detail_groupcount}[$i]
+      |.$locale->text('Salesperson').qq|: <b>$form->{cm_detail_groupname}[$i]</b>
+      &nbsp;|.$locale->text('Address').qq|: $form->{cm_detail_groupaddress}[$i]
+      &nbsp;|.$locale->text('Total Invoice Paid').qq|: $form->{cm_detail_groupcount}[$i]
     </td>
   </tr>
 |;
@@ -382,6 +389,15 @@ sub render_report {
 
 
 sub print_report { &print }
+
+sub commission_preview {
+  $form->{media} = 'screen';
+  &print;
+}
+
+sub back {
+  &report;
+}
 
 sub print {
 

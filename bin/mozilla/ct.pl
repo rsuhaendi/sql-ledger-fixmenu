@@ -65,12 +65,6 @@ sub create_links {
   $form->{contactid} = $form->{all_contact}->[0]->{id};
   if ($form->{all_contact}->[0]->{typeofcontact}) {
     $form->{typeofcontact} = $form->{all_contact}->[0]->{typeofcontact};
-  } elsif ($form->{id}
-      && !($form->{all_contact}->[0]->{firstname}
-           || $form->{all_contact}->[0]->{lastname})) {
-    # Data lama/import sering tidak mengisi typeofcontact maupun first/last name.
-    # Tampilkan Name dari tabel customer agar tidak terlihat kosong.
-    $form->{typeofcontact} = 'company';
   }
   $form->{typeofcontact} ||= ($form->{db} eq 'customer') ? "person" : "company";
   for (qw(email phone fax mobile salutation firstname lastname gender contacttitle ktp occupation)) { $form->{$_} = $form->{all_contact}->[0]->{$_} }
@@ -2095,9 +2089,21 @@ sub form_header {
 
   for (qw(M F)) { $gender{$_} = "checked" if $form->{gender} eq $_ }
   
+  # Data lama/import: nama ada di customer.name, tetapi first/last kosong.
+  # Tampilkan field Name di mode Person agar nama tidak tersembunyi/tertimpa.
+  my $legacy_name = ($form->{id} && $form->{name}
+      && !$form->{firstname} && !$form->{lastname}) ? 1 : 0;
+
   if ($form->{typeofcontact} eq 'person') {
       
-    $name = qq|
+    $name = ($legacy_name) ? qq|
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Name').qq|</th>
+		<td><input name=name size=35 maxlength=64 value="|.$form->quote($form->{name}).qq|"></td>
+	      </tr>
+| : '';
+
+    $name .= qq|
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Salutation').qq|</th>
 		<td><input name=salutation size=35 maxlength=32 value="|.$form->quote($form->{salutation}).qq|"></td>

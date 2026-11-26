@@ -296,23 +296,31 @@ sub generate {
   $form->{format} ||= 'html';
   $form->{media} ||= 'screen';
 
-  my $formats = qq|<option value="html">HTML<option value="pdf">PDF|;
+  my $formats = qq|<select name=format>
+    <option value="html">|.$locale->text('html').qq|
+    <option value="pdf">|.$locale->text('PDF').qq|
+  </select>|;
+  $formats = qq|<select name=format><option value="html">|.$locale->text('html').qq|</select>| unless $latex;
   $formats =~ s/(<option value="\Q$form->{format}\E")/$1 selected/;
-  $formats = qq|<option value="html">HTML| unless $latex;
 
-  my $media = qq|<option value="screen">|.$locale->text('Screen')
-            .qq|<option value="printer">|.$locale->text('Printer');
+  my $media = qq|<select name=media>
+    <option value="screen">|.$locale->text('Screen').qq|
+    <option value="printer">|.$locale->text('Printer').qq|
+  </select>|;
   $media =~ s/(<option value="\Q$form->{media}\E")/$1 selected/;
 
   print qq|
+<br>
+
 <table>
   <tr>
-    <th align=left nowrap>|.$locale->text('Format').qq|</th>
-    <td align=left><select name=format>$formats</select></td>
-    <th align=left nowrap>|.$locale->text('Media').qq|</th>
-    <td align=left><select name=media>$media</select></td>
+    <td>$formats</td>
+    <td>$media</td>
   </tr>
 </table>
+
+<br>
+<hr size=3 noshade>
 |;
 
   $form->hide_form(qw(nextsub path login title fromdate todate commission_deduction employee_id));

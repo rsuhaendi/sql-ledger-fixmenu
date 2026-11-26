@@ -44,11 +44,14 @@ sub prepare_data {
     $form->{$key} = [];
   }
 
-  my @caption = grep { $_ ne '' } (
-    ($form->{fromdate} || $form->{todate})
-      ? $form->{fromdate}.' - '.$form->{todate} : '',
-    ($form->{employee_id} || '') =~ /^(.*)--/ ? $1 : '',
-  );
+  my @caption;
+  if ($form->{fromdate} || $form->{todate}) {
+    my $from = $form->{fromdate}
+      ? $locale->date(\%myconfig, $form->{fromdate}, 1) : '';
+    my $to = $form->{todate}
+      ? $locale->date(\%myconfig, $form->{todate}, 1) : '';
+    push @caption, $locale->text('Period').': '.$from.' '.$locale->text('To').' '.$to;
+  }
   $form->{cm_caption} = join ' | ', map { text_val($_) } @caption;
 
   my ($total_gross, $total_deduction, $total_net) = (0, 0, 0);

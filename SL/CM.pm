@@ -211,11 +211,13 @@ sub report {
 
   $query = qq|
     SELECT a.datepaid, a.transdate, a.invnumber, e.name AS employee,
+           ad.address1, ad.address2, ad.city, ad.state, ad.zipcode, ad.country,
            cu.name AS customer, cu.billing_type,
            a.commission_amount AS gross,
            a.commission_deduction AS deduction, a.commission_net AS net
     FROM ar a
     JOIN employee e ON (e.id = a.employee_id)
+    LEFT JOIN address ad ON (ad.trans_id = e.id)
     LEFT JOIN customer cu ON (cu.id = a.customer_id)
     WHERE a.commission_posted = true
       AND a.paid >= a.amount

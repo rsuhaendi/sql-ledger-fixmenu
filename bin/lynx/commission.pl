@@ -34,7 +34,9 @@ sub prepare_data {
                   cm_detail_customer cm_detail_invoice cm_detail_period
                   cm_detail_transdate cm_detail_paiddate cm_detail_gross
                   cm_detail_deduction cm_detail_net cm_detail_subtotal
-                  cm_detail_row cm_detail_grand cm_detail_name)) {
+                  cm_detail_row cm_detail_grand cm_detail_name
+                  cm_detail_group cm_detail_groupname
+                  cm_detail_groupaddress cm_detail_groupcount)) {
     $form->{$key} = [];
   }
 
@@ -66,9 +68,19 @@ sub prepare_data {
   $form->{cm_total_deduction} = fmt_amount($total_deduction);
   $form->{cm_total_net} = fmt_amount($total_net);
 
+  my %counts;
+  for my $ref (@{ $form->{CM_detail} }) { $counts{$ref->{employee}}++ }
+
   my $current = '';
   my %sub;
   my $d = 0;
+
+  my $address = sub {
+    my ($ref) = @_;
+    return join ', ', grep { $_ ne '' } (
+      $ref->{address1}, $ref->{address2}, $ref->{city},
+      $ref->{state}, $ref->{zipcode}, $ref->{country});
+  };
 
   my $flush_subtotal = sub {
     return unless $sub{invoices};
@@ -108,6 +120,10 @@ sub prepare_data {
     $form->{cm_detail_subtotal}[$d] = 0;
     $form->{cm_detail_row}[$d] = 1;
     $form->{cm_detail_grand}[$d] = 0;
+    $form->{cm_detail_group}[$d] = ($sub{invoices} == 1) ? 1 : 0;
+    $form->{cm_detail_groupname}[$d] = text_val($ref->{employee});
+    $form->{cm_detail_groupaddress}[$d] = text_val(&$address($ref));
+    $form->{cm_detail_groupcount}[$d] = $counts{$ref->{employee}} || 0;
     $form->{cm_detail_customer}[$d] = text_val($ref->{customer});
     $form->{cm_detail_invoice}[$d] = text_val($ref->{invnumber});
     $form->{cm_detail_period}[$d] = text_val($ref->{period});
@@ -148,10 +164,6 @@ sub report {
   chomp $form->{selectemployee};
   $form->{selectemployee} = $form->escape($form->{selectemployee}, 1);
 
-  my $formats = qq|<option value="html">HTML<option value="pdf">PDF|;
-  $formats =~ s/(<option value="\Q$form->{format}\E")/$1 selected/;
-  $formats = qq|<option value="html">HTML| unless $latex;
-
   $form->header;
 
   &calendar;
@@ -182,10 +194,6 @@ sub report {
         <tr>
           <th align=right nowrap>|.$locale->text('Deduction').qq| (%)</th>
           <td><input name=commission_deduction size=5 value="$form->{commission_deduction}"></td>
-        </tr>
-        <tr>
-          <th align=right nowrap>|.$locale->text('Format').qq|</th>
-          <td><select name=format>$formats</select></td>
         </tr>
       </table>
     </td>
@@ -244,9 +252,33 @@ sub generate {
 <form method="post" name="main" action="$form->{script}">
 |;
 
-  $form->hide_form(qw(nextsub path login title fromdate todate commission_deduction employee_id format));
+  $form->{format} ||= 'html';
+  $form->{media} ||= 'screen';
 
-  my %button = ('Print' => { ndx => 1, key => 'P', value => $locale->text('Print Report') });
+  my $formats = qq|<option value="html">HTML<option value="pdf">PDF|;
+  $formats =~ s/(<option value="\Q$form->{format}\E")/$1 selected/;
+  $formats = qq|<option value="html">HTML| unless $latex;
+
+  my $media = qq|<option value="screen">|.$locale->text('Screen')
+            .qq|<option value="printer">|.$locale->text('Printer');
+  $media =~ s/(<option value="\Q$form->{media}\E")/$1 selected/;
+
+  print qq|
+<table>
+  <tr>
+    <th align=right nowrap>|.$locale->text('Format').qq|</th>
+    <td><select name=format>$formats</select></td>
+  </tr>
+  <tr>
+    <th align=right nowrap>|.$locale->text('Media').qq|</th>
+    <td><select name=media>$media</select></td>
+  </tr>
+</table>
+|;
+
+  $form->hide_form(qw(nextsub path login title fromdate todate commission_deduction employee_id));
+
+  my %button = ('Print' => { ndx => 1, key => 'P', value => $locale->text('Print') });
   $form->print_button(\%button);
 
   print qq|
@@ -286,43 +318,6 @@ sub render_report {
   print qq|
 <table width=100%>
   <tr class=listheading>
-    <th>|.$locale->text('Salesperson').qq|</th>
-    <th align=right>|.$locale->text('Rate').qq|</th>
-    <th align=right>|.$locale->text('Invoices').qq|</th>
-    <th align=right>|.$locale->text('Gross').qq|</th>
-    <th align=right>|.$locale->text('Deduction').qq|</th>
-    <th align=right>|.$locale->text('Net').qq|</th>
-  </tr>
-|;
-
-  for my $i (0 .. $#{ $form->{cm_summary_name} }) {
-    print qq|
-  <tr class=listrow@{[ $i % 2 ]}>
-    <td>$form->{cm_summary_name}[$i]&nbsp;</td>
-    <td align=right>$form->{cm_summary_rate}[$i]</td>
-    <td align=right>$form->{cm_summary_invoices}[$i]</td>
-    <td align=right>$form->{cm_summary_gross}[$i]</td>
-    <td align=right>$form->{cm_summary_deduction}[$i]</td>
-    <td align=right>$form->{cm_summary_net}[$i]</td>
-  </tr>
-|;
-  }
-
-  print qq|
-  <tr class=listtotal>
-    <th>|.$locale->text('Total').qq|</th>
-    <th>&nbsp;</th>
-    <th>&nbsp;</th>
-    <th align=right>$form->{cm_total_gross}</th>
-    <th align=right>$form->{cm_total_deduction}</th>
-    <th align=right>$form->{cm_total_net}</th>
-  </tr>
-</table>
-
-<p></p>
-
-<table width=100%>
-  <tr class=listheading>
     <th>|.$locale->text('Customer').qq|</th>
     <th>|.$locale->text('Invoice').qq|</th>
     <th>|.$locale->text('Period').qq|</th>
@@ -339,9 +334,21 @@ sub render_report {
               : $form->{cm_detail_subtotal}[$i] ? 'listsubtotal'
               : 'listrow'.($i % 2);
 
+    if ($form->{cm_detail_group}[$i]) {
+      print qq|
+  <tr class=listheading>
+    <td colspan=8>
+      <b>$form->{cm_detail_groupname}[$i]</b>
+      $form->{cm_detail_groupaddress}[$i]
+      |.$locale->text('Total Invoice Paid').qq|: $form->{cm_detail_groupcount}[$i]
+    </td>
+  </tr>
+|;
+    }
+
     if ($form->{cm_detail_subtotal}[$i] || $form->{cm_detail_grand}[$i]) {
       my $label = $form->{cm_detail_grand}[$i]
-        ? $locale->text('Total') : $locale->text('Subtotal').' '.$form->{cm_detail_name}[$i];
+        ? $locale->text('Total') : $locale->text('Subtotal');
 
       print qq|
   <tr class=$class>
@@ -384,19 +391,33 @@ sub print {
     $form->{format} = 'html';
   }
   $form->{format} = 'html' unless $form->{format} =~ /^(html|pdf)$/;
+  $form->{media} ||= 'screen';
   $form->{language_code} = '' unless defined $form->{language_code};
 
   &prepare_data;
 
   my $dbh = $form->dbconnect(\%myconfig);
   my %defaults = $form->get_defaults($dbh, [qw(company address tel fax companyemail companywebsite)]);
+  my %printers = $form->get_defaults($dbh, ['printer_%']);
   $dbh->disconnect;
   for (keys %defaults) { $form->{$_} = $defaults{$_} }
+  for (keys %printers) {
+    my ($label) = /^printer_(.*)$/;
+    $form->{"${label}_printer"} = $printers{$_};
+  }
 
   $form->{templates} = "$templates/$myconfig{templates}";
   $form->{IN} = ($form->{format} eq 'pdf') ? 'sales_commission.tex' : 'sales_commission.html';
-  $form->{media} = 'screen';
   $form->{copies} = 1;
+  $form->{bodyattr} = '';
+
+  if ($form->{media} eq 'printer') {
+    if ($form->{Printer_printer}) {
+      $form->{OUT} = "| $form->{Printer_printer}";
+    } else {
+      $form->{bodyattr} = ' onload="window.print()"';
+    }
+  }
 
   $form->format_string(qw(company address tel fax companyemail companywebsite templates language_code));
   $form->parse_template(\%myconfig, $userspath, $dvipdf, $xelatex);

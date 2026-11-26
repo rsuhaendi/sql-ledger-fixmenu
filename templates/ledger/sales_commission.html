@@ -1,4 +1,4 @@
-<body bgcolor=ffffff>
+<body bgcolor=ffffff<%bodyattr%>>
 
 <table width=100%>
 
@@ -22,39 +22,6 @@
 
 <table width=100%>
   <tr class=listheading>
-    <th>Salesperson</th>
-    <th align=right>Rate</th>
-    <th align=right>Invoices</th>
-    <th align=right>Gross</th>
-    <th align=right>Deduction</th>
-    <th align=right>Net</th>
-  </tr>
-
-<%foreach cm_summary_name%>
-  <tr>
-    <td><%cm_summary_name%>&nbsp;</td>
-    <td align=right><%cm_summary_rate%></td>
-    <td align=right><%cm_summary_invoices%></td>
-    <td align=right><%cm_summary_gross%></td>
-    <td align=right><%cm_summary_deduction%></td>
-    <td align=right><%cm_summary_net%></td>
-  </tr>
-<%end cm_summary_name%>
-
-  <tr class=listtotal>
-    <th>Total</th>
-    <th>&nbsp;</th>
-    <th>&nbsp;</th>
-    <th align=right><%cm_total_gross%></th>
-    <th align=right><%cm_total_deduction%></th>
-    <th align=right><%cm_total_net%></th>
-  </tr>
-</table>
-
-<p></p>
-
-<table width=100%>
-  <tr class=listheading>
     <th>Customer</th>
     <th>Invoice</th>
     <th>Period</th>
@@ -66,9 +33,30 @@
   </tr>
 
 <%foreach cm_detail_customer%>
+<%if cm_detail_group%>
+  <tr class=listheading>
+    <td colspan=8>
+      <b><%cm_detail_groupname%></b>
+      <%cm_detail_groupaddress%>
+      - Total Invoice Paid: <%cm_detail_groupcount%>
+    </td>
+  </tr>
+<%end cm_detail_group%>
+<%if cm_detail_row%>
+  <tr>
+    <td><%cm_detail_customer%>&nbsp;</td>
+    <td><%cm_detail_invoice%>&nbsp;</td>
+    <td><%cm_detail_period%>&nbsp;</td>
+    <td><%cm_detail_transdate%>&nbsp;</td>
+    <td><%cm_detail_paiddate%>&nbsp;</td>
+    <td align=right><%cm_detail_gross%></td>
+    <td align=right><%cm_detail_deduction%></td>
+    <td align=right><%cm_detail_net%></td>
+  </tr>
+<%end cm_detail_row%>
 <%if cm_detail_subtotal%>
   <tr class=listsubtotal>
-    <td colspan=5 align=right>Subtotal <%cm_detail_name%>&nbsp;</td>
+    <td colspan=5 align=right>Subtotal&nbsp;</td>
     <td align=right><%cm_detail_gross%></td>
     <td align=right><%cm_detail_deduction%></td>
     <td align=right><%cm_detail_net%></td>
@@ -82,18 +70,6 @@
     <th align=right><%cm_detail_net%></th>
   </tr>
 <%end cm_detail_grand%>
-<%if not cm_detail_row%>
-  <tr>
-    <td><%cm_detail_customer%>&nbsp;</td>
-    <td><%cm_detail_invoice%>&nbsp;</td>
-    <td><%cm_detail_period%>&nbsp;</td>
-    <td><%cm_detail_transdate%>&nbsp;</td>
-    <td><%cm_detail_paiddate%>&nbsp;</td>
-    <td align=right><%cm_detail_gross%></td>
-    <td align=right><%cm_detail_deduction%></td>
-    <td align=right><%cm_detail_net%></td>
-  </tr>
-<%end cm_detail_row%>
 <%end cm_detail_customer%>
 
 </table>

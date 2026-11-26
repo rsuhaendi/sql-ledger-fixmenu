@@ -61,7 +61,7 @@ sub get_employee {
 		pm.description AS paymentmethod,
 		r.description AS acsrole
                 FROM employee e
-		JOIN address ad ON (e.id = ad.trans_id)
+		LEFT JOIN address ad ON (e.id = ad.trans_id)
 		LEFT JOIN acsrole r ON (r.id = e.acsrole_id)
 		LEFT JOIN bank bk ON (bk.id = e.id)
 		LEFT JOIN address ad1 ON (bk.address_id = ad1.id)
@@ -1306,7 +1306,7 @@ sub payslip_details {
 		ad1.zipcode AS employeebankzipcode,
 		ad1.country AS employeebankcountry
                 FROM employee e
-		JOIN address ad ON (e.id = ad.trans_id)
+		LEFT JOIN address ad ON (e.id = ad.trans_id)
 
 		LEFT JOIN bank bk ON (bk.id = e.id)
 		LEFT JOIN address ad1 ON (bk.address_id = ad1.id)

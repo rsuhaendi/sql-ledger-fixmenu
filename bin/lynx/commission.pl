@@ -360,13 +360,28 @@ sub render_report {
 
   for my $i (0 .. $#{ $form->{cm_group_name} }) {
     print qq|
-<p>
-  <b>|.$locale->text('Salesperson').qq|: $form->{cm_group_name}[$i]</b>
-  &nbsp;|.$locale->text('Address').qq|: $form->{cm_group_address}[$i]
-  &nbsp;|.$locale->text('Total Customer').qq|: $form->{cm_group_customercount}[$i]
-  &nbsp;|.$locale->text('Total Invoice Paid').qq|: $form->{cm_group_paidcount}[$i]
-  &nbsp;|.$locale->text('Total Invoice Unpaid').qq|: $form->{cm_group_unpaidcount}[$i]
-</p>
+<table>
+  <tr>
+    <th align=left nowrap>|.$locale->text('Salesperson').qq|:</th>
+    <td><b>$form->{cm_group_name}[$i]</b></td>
+  </tr>
+  <tr>
+    <th align=left nowrap>|.$locale->text('Address').qq|:</th>
+    <td>$form->{cm_group_address}[$i]</td>
+  </tr>
+  <tr>
+    <th align=left nowrap>|.$locale->text('Total Customer').qq|:</th>
+    <td>$form->{cm_group_customercount}[$i]</td>
+  </tr>
+  <tr>
+    <th align=left nowrap>|.$locale->text('Total Invoice Paid').qq|:</th>
+    <td>$form->{cm_group_paidcount}[$i]</td>
+  </tr>
+  <tr>
+    <th align=left nowrap>|.$locale->text('Total Invoice Unpaid').qq|:</th>
+    <td>$form->{cm_group_unpaidcount}[$i]</td>
+  </tr>
+</table>
 |;
   }
 

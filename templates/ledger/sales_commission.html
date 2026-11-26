@@ -21,13 +21,29 @@
 </table>
 
 <%foreach cm_group_name%>
-<p>
-  <b>Salesperson: <%cm_group_name%></b>
-  &nbsp;Address: <%cm_group_address%>
-  &nbsp;Total Customer: <%cm_group_customercount%>
-  &nbsp;Total Invoice Paid: <%cm_group_paidcount%>
-  &nbsp;Total Invoice Unpaid: <%cm_group_unpaidcount%>
-</p>
+<table>
+  <tr>
+    <th align=left nowrap>Salesperson:</th>
+    <td><b><%cm_group_name%></b></td>
+  </tr>
+  <tr>
+    <th align=left nowrap>Address:</th>
+    <td><%cm_group_address%></td>
+  </tr>
+  <tr>
+    <th align=left nowrap>Total Customer:</th>
+    <td><%cm_group_customercount%></td>
+  </tr>
+  <tr>
+    <th align=left nowrap>Total Invoice Paid:</th>
+    <td><%cm_group_paidcount%></td>
+  </tr>
+  <tr>
+    <th align=left nowrap>Total Invoice Unpaid:</th>
+    <td><%cm_group_unpaidcount%></td>
+  </tr>
+</table>
+<br>
 <%end cm_group_name%>
 
 <table width=100% border=0>

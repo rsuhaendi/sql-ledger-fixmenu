@@ -1,0 +1,119 @@
+<body bgcolor=ffffff>
+
+<table width=100%>
+
+  <%include letterhead.html%>
+
+  <tr>
+    <td width=10>&nbsp;</td>
+
+    <th colspan=3>
+      <h4>S A L E S - C O M M I S S I O N</h4>
+    </th>
+  </tr>
+
+  <tr>
+    <td>&nbsp;</td>
+
+    <td colspan=3 align=right><%cm_caption%></td>
+  </tr>
+
+</table>
+
+<table width=100%>
+  <tr class=listheading>
+    <th>Salesperson</th>
+    <th align=right>Rate</th>
+    <th align=right>Invoices</th>
+    <th align=right>Gross</th>
+    <th align=right>Deduction</th>
+    <th align=right>Net</th>
+  </tr>
+
+<%foreach cm_summary_name%>
+  <tr>
+    <td><%cm_summary_name%>&nbsp;</td>
+    <td align=right><%cm_summary_rate%></td>
+    <td align=right><%cm_summary_invoices%></td>
+    <td align=right><%cm_summary_gross%></td>
+    <td align=right><%cm_summary_deduction%></td>
+    <td align=right><%cm_summary_net%></td>
+  </tr>
+<%end cm_summary_name%>
+
+  <tr class=listtotal>
+    <th>Total</th>
+    <th>&nbsp;</th>
+    <th>&nbsp;</th>
+    <th align=right><%cm_total_gross%></th>
+    <th align=right><%cm_total_deduction%></th>
+    <th align=right><%cm_total_net%></th>
+  </tr>
+</table>
+
+<p></p>
+
+<table width=100%>
+  <tr class=listheading>
+    <th>Customer</th>
+    <th>Invoice</th>
+    <th>Period</th>
+    <th>Transaction Date</th>
+    <th>Paid Date</th>
+    <th align=right>Gross</th>
+    <th align=right>Deduction</th>
+    <th align=right>Net</th>
+  </tr>
+
+<%foreach cm_detail_customer%>
+<%if cm_detail_subtotal%>
+  <tr class=listsubtotal>
+    <td colspan=5 align=right>Subtotal <%cm_detail_name%>&nbsp;</td>
+    <td align=right><%cm_detail_gross%></td>
+    <td align=right><%cm_detail_deduction%></td>
+    <td align=right><%cm_detail_net%></td>
+  </tr>
+<%end cm_detail_subtotal%>
+<%if cm_detail_grand%>
+  <tr class=listtotal>
+    <th colspan=5 align=right>Total&nbsp;</th>
+    <th align=right><%cm_detail_gross%></th>
+    <th align=right><%cm_detail_deduction%></th>
+    <th align=right><%cm_detail_net%></th>
+  </tr>
+<%end cm_detail_grand%>
+<%if not cm_detail_row%>
+  <tr>
+    <td><%cm_detail_customer%>&nbsp;</td>
+    <td><%cm_detail_invoice%>&nbsp;</td>
+    <td><%cm_detail_period%>&nbsp;</td>
+    <td><%cm_detail_transdate%>&nbsp;</td>
+    <td><%cm_detail_paiddate%>&nbsp;</td>
+    <td align=right><%cm_detail_gross%></td>
+    <td align=right><%cm_detail_deduction%></td>
+    <td align=right><%cm_detail_net%></td>
+  </tr>
+<%end cm_detail_row%>
+<%end cm_detail_customer%>
+
+</table>
+
+<br><br>
+
+<table width=100%>
+  <tr>
+    <td width=50% align=center>
+      <br>
+      _______________________________<br>
+      Penerima
+    </td>
+    <td width=50% align=center>
+      <br>
+      _______________________________<br>
+      Approved
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

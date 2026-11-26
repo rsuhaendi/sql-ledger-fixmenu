@@ -220,7 +220,7 @@ sub report {
     WHERE a.commission_posted = true
       AND a.paid >= a.amount
       $where
-    ORDER BY a.datepaid, a.invnumber
+    ORDER BY e.name, a.datepaid, a.invnumber
   |;
   $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute;

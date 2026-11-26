@@ -1,0 +1,61 @@
+<%include preamble.tex%>
+\usepackage{longtable}
+
+\begin{document}
+\pagestyle{empty}
+\fontfamily{cmss}\fontsize{9pt}{10pt}\selectfont
+
+<%include letterhead.tex%>
+
+\begin{center}
+\textbf{S A L E S - C O M M I S S I O N}\\
+<%cm_caption%>
+\end{center}
+
+\vspace{0.3cm}
+
+\noindent\begin{tabular*}{\textwidth}{@{\extracolsep\fill}lrrrrr}
+\hline
+\textbf{Salesperson} & \textbf{Rate} & \textbf{Invoices} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
+\hline
+<%foreach cm_summary_name%>
+<%cm_summary_name%> & <%cm_summary_rate%> & <%cm_summary_invoices%> & <%cm_summary_gross%> & <%cm_summary_deduction%> & <%cm_summary_net%> \\
+<%end cm_summary_name%>
+\hline
+\textbf{Total} & & & \textbf{<%cm_total_gross%>} & \textbf{<%cm_total_deduction%>} & \textbf{<%cm_total_net%>} \\
+\hline
+\end{tabular*}
+
+\vspace{0.4cm}
+
+\noindent\begin{longtable}{|p{2.2cm}|p{2.8cm}|p{2.6cm}|p{2.1cm}|p{2.1cm}|r|r|r|}
+\hline
+\textbf{Customer} & \textbf{Invoice} & \textbf{Period} & \textbf{Trans. Date} & \textbf{Paid Date} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
+\hline
+\endhead
+
+<%foreach cm_detail_customer%>
+<%if cm_detail_subtotal%>
+\hline
+\multicolumn{5}{|r|}{\textbf{Subtotal <%cm_detail_name%>}} & \textbf{<%cm_detail_gross%>} & \textbf{<%cm_detail_deduction%>} & \textbf{<%cm_detail_net%>} \\
+<%end cm_detail_subtotal%>
+<%if cm_detail_grand%>
+\hline
+\multicolumn{5}{|r|}{\textbf{Total}} & \textbf{<%cm_detail_gross%>} & \textbf{<%cm_detail_deduction%>} & \textbf{<%cm_detail_net%>} \\
+\hline
+<%end cm_detail_grand%>
+<%if not cm_detail_row%>
+<%cm_detail_customer%> & <%cm_detail_invoice%> & <%cm_detail_period%> & <%cm_detail_transdate%> & <%cm_detail_paiddate%> & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
+<%end cm_detail_row%>
+<%end cm_detail_customer%>
+
+\end{longtable}
+
+\vspace{1cm}
+
+\noindent\begin{tabular}{p{7cm}p{7cm}}
+\hrulefill & \hrulefill \\
+Penerima & Approved \\
+\end{tabular}
+
+\end{document}

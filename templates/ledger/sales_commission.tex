@@ -17,9 +17,9 @@
 <%foreach cm_group_name%>
 \noindent\textbf{Salesperson: <%cm_group_name%>}\\
 Address: <%cm_group_address%>\\
-Total Customer: <%cm_group_customercount%>\\
-Total Invoice Paid: <%cm_group_paidcount%>\\
-Total Invoice Unpaid: <%cm_group_unpaidcount%>\par
+\textbf{<%cm_group_customercount%> Customers}\\
+<%cm_group_paidcount%> Invoice Paid\\
+<%cm_group_unpaidcount%> Invoice Unpaid\par
 <%end cm_group_name%>
 
 \vspace{0.2cm}

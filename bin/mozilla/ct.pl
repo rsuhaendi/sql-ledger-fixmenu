@@ -65,6 +65,12 @@ sub create_links {
   $form->{contactid} = $form->{all_contact}->[0]->{id};
   if ($form->{all_contact}->[0]->{typeofcontact}) {
     $form->{typeofcontact} = $form->{all_contact}->[0]->{typeofcontact};
+  } elsif ($form->{id}
+      && !($form->{all_contact}->[0]->{firstname}
+           || $form->{all_contact}->[0]->{lastname})) {
+    # Data lama/import sering tidak mengisi typeofcontact maupun first/last name.
+    # Tampilkan Name dari tabel customer agar tidak terlihat kosong.
+    $form->{typeofcontact} = 'company';
   }
   $form->{typeofcontact} ||= ($form->{db} eq 'customer') ? "person" : "company";
   for (qw(email phone fax mobile salutation firstname lastname gender contacttitle ktp occupation)) { $form->{$_} = $form->{all_contact}->[0]->{$_} }

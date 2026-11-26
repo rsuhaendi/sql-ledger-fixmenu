@@ -1992,18 +1992,21 @@ sub charts_for_export {
 
   my $dbh = $form->dbconnect($myconfig);
 
-  my $query = qq|SELECT c.*, c.category AS account_heading FROM chart c|;
-  my @where;
-  if ($filter && $filter ne '') {
-    push @where, qq|c.accno ILIKE '%$filter%' OR c.description ILIKE '%$filter%'|;
+  my $query = qq|SELECT c.* FROM chart c|;
+  my @param;
+
+  if (defined $filter && $filter ne '') {
+    $query .= qq| WHERE c.accno ILIKE ? OR c.description ILIKE ?
+                  OR c.charttype ILIKE ? OR c.category ILIKE ?|;
+    push @param, map { "%$filter%" } 1 .. 4;
   }
-  if (@where) {
-    $query .= " WHERE " . join(" AND ", @where);
-  }
+
   $query .= qq| ORDER BY c.accno|;
 
   my $sth = $dbh->prepare($query) || $form->dberror($query);
-  $sth->execute || $form->dberror($query);
+  $sth->execute(@param) || $form->dberror($query);
+
+  $form->{TR} = [];
 
   while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
     push @{ $form->{TR} }, $ref;

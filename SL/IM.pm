@@ -1961,7 +1961,8 @@ sub customers_for_export {
                         ad.address1, ad.address2, ad.city, ad.state,
                         ad.zipcode, ad.country,
                         ct.salutation, ct.firstname, ct.lastname, ct.ktp,
-                        ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
+                        ct.occupation, ct.mobile, ct.gender,
+                        COALESCE(NULLIF(ct.typeofcontact, ''), 'person') AS typeofcontact
                    FROM customer c
                    JOIN contact ct ON (ct.trans_id = c.id)
                    LEFT JOIN address ad ON (ad.trans_id = c.id)

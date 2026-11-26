@@ -174,7 +174,8 @@ sub report {
 
   my $dbh = $form->dbconnect($myconfig);
 
-  my ($employee_id) = split /--/, ($form->{employee_id} || '');
+  my @employee = split /--/, ($form->{employee_id} || '');
+  my $employee_id = $employee[-1] || '';
   $employee_id *= 1;
 
   my $datefield = 'COALESCE(a.datepaid, a.transdate)';
@@ -188,7 +189,6 @@ sub report {
   if ($employee_id) {
     $where .= " AND a.employee_id = $employee_id";
   }
-
   my $query = qq|
     SELECT e.id, e.name, e.commission_amount AS rate,
            count(*) AS invoices,

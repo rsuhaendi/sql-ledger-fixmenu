@@ -374,11 +374,11 @@ sub render_report {
     <td><b>$form->{cm_group_name}[$i]</b></td>
   </tr>
   <tr>
-    <th align=left nowrap>|.$locale->text('Address').qq|:</th>
+    <td align=left nowrap>|.$locale->text('Address').qq|:</td>
     <td>$form->{cm_group_address}[$i]</td>
   </tr>
   <tr>
-    <td colspan=2><b>$form->{cm_group_customercount}[$i] |.$locale->text('Customers').qq|</b></td>
+    <td colspan=2>$form->{cm_group_customercount}[$i] |.$locale->text('Customers').qq|</td>
   </tr>
   <tr>
     <td colspan=2>$form->{cm_group_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>

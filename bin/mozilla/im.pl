@@ -393,7 +393,7 @@ sub export {
           <td>
             <select name=dateformat>|
             .$form->select_option($selectdateformat, $form->{dateformat})
-            .qq|
+            .qq|</select>
           </td>
         </tr>
       </table>
@@ -3237,7 +3237,7 @@ if (document.addEventListener) {
           <td>
             <select name=dateformat>|
             .$form->select_option($selectdateformat, $form->{dateformat})
-            .qq|
+            .qq|</select>
           </td>
         </tr>
       </table>

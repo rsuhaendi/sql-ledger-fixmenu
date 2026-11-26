@@ -1690,6 +1690,53 @@ sub print_form {
 
   AA->company_details(\%myconfig, \%$form);
 
+  # Jenis Pembayaran dan periode pemakaian untuk form/cetakan invoice.
+  # Nilai periode yang sudah diisi di form tidak ditimpa.
+  eval {
+    my $cid = ($form->{customer_id} || 0) * 1;
+    if (!$cid && defined $form->{customer} && $form->{customer} =~ /--(\d+)\s*$/) {
+      $cid = $1;
+    }
+    if ($cid && (!$form->{billing_type} || $form->{billing_type} eq '')) {
+      my $dbh = $form->dbconnect(\%myconfig);
+      ($form->{billing_type}) = $dbh->selectrow_array(
+        "SELECT billing_type FROM customer WHERE id = $cid");
+      $dbh->disconnect;
+    }
+    $form->{billing_type} = '' unless defined $form->{billing_type};
+
+    my $start = $form->{transdate} || $form->{invdate} || $form->{orddate} || $form->{quodate};
+    if ($start) {
+      my $end = $form->add_date(\%myconfig, $form->add_date(\%myconfig, $start, 1, 'month'), -1, 'day');
+      my $prev_start = $form->add_date(\%myconfig, $start, -1, 'month');
+      my $prev_end = $form->add_date(\%myconfig, $start, -1, 'day');
+      my $period_text = ($form->{billing_type} eq 'Pascabayar')
+        ? "$prev_start s/d $prev_end" : "$start s/d $end";
+
+      my %ph = (
+        '<PERIOD>' => $period_text,
+        '<PERIOD_START>' => $start,
+        '<PERIOD_END>' => $end,
+        '<PREV_PERIOD_START>' => $prev_start,
+        '<PREV_PERIOD_END>' => $prev_end,
+      );
+      for my $k (qw(description notes intnotes period)) {
+        next unless defined $form->{$k} && $form->{$k} ne '';
+        for my $p (keys %ph) { $form->{$k} =~ s/\Q$p\E/$ph{$p}/g }
+      }
+      for my $i (1 .. ($form->{rowcount} || 0)) {
+        my $k = "description_$i";
+        next unless defined $form->{$k} && $form->{$k} ne '';
+        for my $p (keys %ph) { $form->{$k} =~ s/\Q$p\E/$ph{$p}/g }
+      }
+
+      if (!defined $form->{period} || $form->{period} eq '') {
+        $form->{period} = $period_text;
+      }
+    }
+    $form->{period} = '' unless defined $form->{period};
+  };
+
   @f = ();
   foreach $i (1 .. $form->{rowcount}) {
     push @f, map { "${_}_$i" } qw(partnumber description projectnumber partsgroup partsgroupcode serialnumber ordernumber customerponumber bin unit itemnotes package);
@@ -1801,6 +1848,7 @@ sub print_form {
   push @f, qw(contact shippingpoint shipvia notes intnotes employee warehouse paymentmethod);
   push @f, map { "shipto$_" } qw(name address1 address2 city state zipcode country contact email phone fax);
   push @f, qw(firstname lastname salutation contacttitle occupation mobile);
+  push @f, qw(period billing_type);
 
   push @f, ("${inv}number", "${inv}date", "${due}date", "${inv}description");
   
@@ -1809,7 +1857,7 @@ sub print_form {
   for (qw(notes intnotes)) { $form->{$_} =~ s/^\s+//g }
 
   # before we format replace <%var%>
-  for ("${inv}description", "notes", "intnotes", "message") { $form->{$_} =~ s/<%(.*?)%>/$fld = lc $1; $form->{$fld}/ge }
+  for ("${inv}description", "notes", "intnotes", "message", "period") { $form->{$_} =~ s/<%(.*?)%>/$fld = lc $1; $form->{$fld}/ge }
 
   $form->format_string(@f);
 

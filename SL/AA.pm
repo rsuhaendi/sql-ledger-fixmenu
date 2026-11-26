@@ -1095,6 +1095,9 @@ sub get_name {
   my $shipto = ", s.*" if ! $form->{linkshipto};
   my $shiptojoin = qq|LEFT JOIN shipto s ON (s.trans_id = c.id)|;
 
+  # Jenis Pembayaran (Prabayar/Pascabayar) hanya ada di tabel customer
+  my $billing_type = ($form->{vc} eq 'customer') ? ', c.billing_type' : '';
+
   my $query = qq|SELECT c.name AS $form->{vc}, c.$form->{vc}number,
                  c.discount, c.creditlimit, c.terms,
                  c.email, c.cc, c.bcc, c.taxincluded,
@@ -1110,6 +1113,7 @@ sub get_name {
                  c.remittancevoucher,
                  pm.description AS payment_method, c.paymentmethod_id,
                  pr.pricegroup
+		 $billing_type
                  $shipto
                  FROM $form->{vc} c
                  JOIN address ad ON (ad.trans_id = c.id)

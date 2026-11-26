@@ -94,6 +94,7 @@ sub invoice_links {
     delete $form->{notes};
     IS->retrieve_invoice(\%myconfig, \%$form);
   }
+  &invoice_billing_period;
   $ml = ($form->{type} eq 'invoice') ? 1 : -1;
   $ml = 1 if $form->{type} eq 'pos_invoice';
 
@@ -517,6 +518,8 @@ sub form_header {
 |;
   }
 
+  $billingtype = "";
+
   if ($form->{generate}) {
 
     $vc = qq|<input type="hidden" name="action" value="update">|;
@@ -530,6 +533,17 @@ sub form_header {
 	      <tr>
 	        <th align=right nowrap>|.$locale->text('Address').qq|</th>
 		<td>$form->{address1} $form->{address2} $form->{zipcode} $form->{city} $form->{state} $form->{country}</td>
+	      </tr>
+|;
+
+    $billingtype = qq|
+	      <tr>
+	        <th align=right nowrap>|.$locale->text('Jenis Pembayaran').qq| :</th>
+		<td><b>$form->{billing_type}</b></td>
+	      </tr>
+	      <tr>
+	        <th align=right nowrap>|.$locale->text('Periode').qq| :</th>
+		<td><input name=period size=35 value="|.$form->quote($form->{period}).qq|"></td>
 	      </tr>
 |;
 
@@ -571,7 +585,7 @@ sub form_header {
 <form method=post name="main" action="$form->{script}">
 |;
 
-  $form->hide_form(qw(id type printed emailed queued title vc discount creditlimit creditremaining tradediscount business closedto locked shipped oldtransdate oldduedate recurring defaultcurrency oldterms cdt precision order_id remittancevoucher reference_rows referenceurl oldwarehouse olddepartment company));
+  $form->hide_form(qw(id type printed emailed queued title vc discount creditlimit creditremaining tradediscount business closedto locked shipped oldtransdate oldduedate recurring defaultcurrency oldterms cdt precision order_id remittancevoucher reference_rows referenceurl oldwarehouse olddepartment company billing_type period_sig));
 
   $form->hide_form(map { "select$_" } ("$form->{vc}", "AR", "AR_paid", "AR_discount"));
   $form->hide_form(map { "select$_" } qw(formname currency partsgroup projectnumber department warehouse employee language paymentmethod printer));
@@ -627,6 +641,7 @@ sub form_header {
 	    <table>
 	      $vc
 	      $address
+	      $billingtype
 	      $creditlimit
 	      $business
 	      <tr>
@@ -700,6 +715,36 @@ sub form_header {
   
   foreach $accno (split / /, $form->{taxaccounts}) { $form->hide_form(map { "${accno}_$_" } qw(rate description taxnumber)) }
 
+}
+
+
+
+sub invoice_billing_period {
+
+  # Jenis Pembayaran dan periode pemakaian diambil dari master customer.
+  # Term/duedate tetap memakai nilai bawaan SQL-Ledger (diisi manual).
+  $form->{billing_type} = '' unless defined $form->{billing_type};
+
+  if (!$form->{billing_type} && $form->{customer_id}) {
+    my $dbh = $form->dbconnect(\%myconfig);
+    ($form->{billing_type}) = $dbh->selectrow_array(
+      "SELECT billing_type FROM customer WHERE id = ".($form->{customer_id} * 1));
+    $dbh->disconnect;
+  }
+  $form->{billing_type} = '' unless defined $form->{billing_type};
+
+  my $sig = ($form->{billing_type} || '').'|'.($form->{transdate} || '');
+  if ($form->{transdate}
+      && (!$form->{period}
+          || (($form->{period_sig} || '') && $form->{period_sig} ne $sig))) {
+    my $start = $form->{transdate};
+    my $end = $form->add_date(\%myconfig, $form->add_date(\%myconfig, $start, 1, 'month'), -1, 'day');
+    my $prev_start = $form->add_date(\%myconfig, $start, -1, 'month');
+    my $prev_end = $form->add_date(\%myconfig, $start, -1, 'day');
+    $form->{period} = ($form->{billing_type} eq 'Pascabayar')
+      ? "$prev_start s/d $prev_end" : "$start s/d $end";
+    $form->{period_sig} = $sig;
+  }
 }
 
 
@@ -1217,6 +1262,9 @@ sub update {
   }
 
   $form->{paidaccounts} = $j;
+
+  # segarkan Jenis Pembayaran/periode setelah pelanggan atau tanggal berubah
+  &invoice_billing_period;
 
   $i = $form->{rowcount};
   $form->{exchangerate} ||= 1;

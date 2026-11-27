@@ -28,9 +28,9 @@ sub num2text {
   my ($self, $amount) = @_;
 
   $amount = int(abs($amount || 0));
-  return $self->{numbername}{0} unless $amount;
-
-  return $self->_id_num2text($amount);
+  my $text = $amount ? $self->_id_num2text($amount) : $self->{numbername}{0};
+  $text = join ' ', map { ucfirst($_) } split /\s+/, $text;
+  return $text;
 }
 
 sub _id_num2text {

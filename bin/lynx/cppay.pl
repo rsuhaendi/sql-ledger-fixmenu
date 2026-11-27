@@ -344,18 +344,39 @@ sub payment_header {
 
   my $detail = (($form->{view} || '') eq 'detail');
 
+  my $calendar = &js_calendar('main', 'datepaid');
+  my $calendar_from = &js_calendar('main', 'duedatefrom');
+  my $calendar_to = &js_calendar('main', 'duedateto');
+
+  my $duedate_label = $locale->text('Due Date');
+  my $from_label = $locale->text('From');
+  my $to_label = $locale->text('To');
+
   my $sales_column = '';
   if ($detail) {
     $sales_column = qq|
           <td>
             <table>
               <tr>
-                <th align=right nowrap>$salesperson</th>
-                <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
-              </tr>
-              <tr>
                 <td align=right><input name=all_sales type=checkbox class=checkbox value=Y $allsales onChange="javascript:document.main.submit()"></td>
                 <th align=left>$all_label</th>
+              </tr>
+              <tr>
+                <th align=right nowrap>$duedate_label</th>
+                <td>
+                  <table>
+                    <tr>
+                      <th align=right>$from_label</th>
+                      <td><input name=duedatefrom value="$form->{duedatefrom}" title="$myconfig{dateformat}" size=11 class=date>$calendar_from</td>
+                      <th align=right>$to_label</th>
+                      <td><input name=duedateto value="$form->{duedateto}" title="$myconfig{dateformat}" size=11 class=date>$calendar_to</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <th align=right nowrap>$salesperson</th>
+                <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
               </tr>
               <tr>
                 <th align=right nowrap>$address</th>
@@ -382,15 +403,7 @@ sub payment_header {
           </td>|;
   }
 
-  my $calendar = &js_calendar('main', 'datepaid');
-  my $calendar_from = &js_calendar('main', 'duedatefrom');
-  my $calendar_to = &js_calendar('main', 'duedateto');
-
-  my $duedate_label = $locale->text('Due Date');
-  my $from_label = $locale->text('From');
-  my $to_label = $locale->text('To');
-
-  my $date_filter_column = qq|
+  my $date_filter_column = $detail ? '' : qq|
           <td>
             <table>
               <tr>

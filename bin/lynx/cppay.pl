@@ -13,7 +13,7 @@ sub text_val {
   my ($value) = @_;
   $value = '' unless defined $value;
 
-  if (($form->{format} || '') eq 'pdf') {
+  if (($form->{format} || '') =~ /^(pdf|ps)$/) {
     $value =~ s/\\/\\\\/g;
     $value =~ s/([&%\$\#_{}])/\\$1/g;
   } else {
@@ -108,9 +108,13 @@ sub setup {
   $form->{selectcurrency} = join "\n", @currency;
   $form->{currency} ||= $form->{defaultcurrency};
 
+  # Printers for the format/media row above the buttons, same as Cash -> Payment.
+  my %printers = $form->get_defaults($dbh, ['printer_%']);
+  $form->{selectprinter} = join "\n", map { $printers{$_} } sort keys %printers;
+
   $dbh->disconnect;
 
-  for (qw(employee account paymentmethod department currency)) {
+  for (qw(employee account paymentmethod department currency printer)) {
     $form->{"select$_"} = $form->escape($form->{"select$_"}, 1);
   }
 }
@@ -123,6 +127,8 @@ sub report {
   $form->{vc} = 'vendor';
 
   $form->{datepaid} ||= $form->current_date(\%myconfig);
+  $form->{media} ||= $myconfig{printer} || 'screen';
+  $form->{format} ||= $myconfig{outputformat} || 'pdf';
   $form->{oldduedatefrom} = $form->{duedatefrom} || '';
   $form->{oldduedateto} = $form->{duedateto} || '';
   $form->{view} = 'list' unless $form->{view};
@@ -254,9 +260,13 @@ sub update {
     my $paid_before = $form->format_amount(\%myconfig, $base_paid / $rate, ($form->{precision} || 2));
 
     my $is_checked = exists $old{$id} ? $old{$id}{checked} : ($form->{allbox} ? 1 : 0);
-    my $paid = $due;
-    if (exists $old{$id} && defined $old{$id}{paid} && $old{$id}{paid} ne '') {
-      $paid = $old{$id}{paid};
+    # Cash -> Payments leaves Paid empty until the row is selected.
+    my $paid = '';
+    if ($is_checked) {
+      $paid = $due;
+      if (exists $old{$id} && defined $old{$id}{paid} && $old{$id}{paid} ne '') {
+        $paid = $old{$id}{paid};
+      }
     }
 
     $form->{"id_$i"} = $id;
@@ -388,29 +398,40 @@ sub payment_header {
 
   my $sales_column = '';
   if ($detail) {
-    $sales_column = qq|
-          <td>
-            <table>
-              <tr>
-                <td align=right><input name=all_sales type=checkbox class=checkbox value=Y $allsales onChange="javascript:document.main.submit()"></td>
-                <th align=left>$all_label</th>
-              </tr>
+    # Cash -> Payment detail: once a salesperson is chosen, the All box and
+    # the Due Date inputs are gone. Dates, when present, are display-only.
+    my ($sales_name) = split /--/, ($form->{employee_id} || '');
+    my $due_row = '';
+    if ($form->{duedatefrom} || $form->{duedateto}) {
+      $due_row = qq|
               <tr>
                 <th align=right nowrap>$duedate_label</th>
                 <td>
                   <table>
                     <tr>
                       <th align=right>$from_label</th>
-                      <td><input name=duedatefrom value="$form->{duedatefrom}" title="$myconfig{dateformat}" size=11 class=date>$calendar_from</td>
+                      <td>$form->{duedatefrom}$calendar_from</td>
                       <th align=right>$to_label</th>
-                      <td><input name=duedateto value="$form->{duedateto}" title="$myconfig{dateformat}" size=11 class=date>$calendar_to</td>
+                      <td>$form->{duedateto}$calendar_to</td>
                     </tr>
                   </table>
                 </td>
-              </tr>
+              </tr>|;
+    }
+    $due_row .= $form->hide_form(qw(duedatefrom duedateto));
+
+    my $sales_number_label = $locale->text('Salesperson Number');
+    $sales_column = qq|
+          <td>
+            <table>
+              $due_row
               <tr>
                 <th align=right nowrap>$salesperson</th>
-                <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
+                <td colspan=2>$sales_name</td>
+              </tr>
+              <tr>
+                <th align=right nowrap>$sales_number_label</th>
+                <td colspan=2>$form->{employeenumber}</td>
               </tr>
               <tr>
                 <th align=right nowrap>$address</th>
@@ -471,9 +492,10 @@ HTML
                       defaultcurrency employee_id employeenumber payment_accno currency
                       exchangerate oldcurrency oldexchangerate olddatepaid
                       oldduedatefrom oldduedateto
-                      datepaid duedatefrom duedateto source memo oldall_sales view rowcount));
+                      datepaid duedatefrom duedateto source memo oldall_sales view rowcount
+                      media format));
   $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
-                      selectdepartment selectcurrency));
+                      selectdepartment selectcurrency selectprinter));
   $form->hide_form(qw(address1 address2 city state zipcode country));
 
   print <<"HTML";
@@ -531,7 +553,7 @@ sub list_invoices {
   # Same column order as Cash -> Payment / Payments: the selection
   # checkbox sits after Due, immediately before Paid.
   my @column_index = $detail_view
-    ? qw(employee invnumber transdate duedate amount due checked paid discount total)
+    ? qw(invnumber transdate duedate amount due checked paid discount total)
     : qw(detail employee employeenumber amount due checked paid memo source);
   my $colspan = $#column_index + 1;
 
@@ -590,7 +612,6 @@ sub list_invoices {
 
     my $cells = $detail_view
       ? qq|
-          <td nowrap>$employee</td>
           <td>$form->{"invnumber_$i"}</td>
           <td nowrap>$form->{"transdate_$i"}</td>
           <td nowrap>$form->{"duedate_$i"}</td>
@@ -610,7 +631,7 @@ sub list_invoices {
           <td align=center><input name="memo_$i" size=20 value="|.$form->quote($form->{"memo_$i"} || '').qq|"></td>
           <td align=center><input name="source_$i" size=10 value="|.$form->quote($form->{"source_$i"} || '').qq|"></td>|;
 
-    for my $key (qw(amount due paid total)) {
+    for my $key (qw(amount due paid discount total)) {
       $totals{$key} += $form->parse_amount(\%myconfig, $form->{"${key}_$i"} || 0);
     }
 
@@ -623,10 +644,13 @@ $hidden|;
   }
 
   # Totals are placed under their own columns, exactly like Cash -> Payment.
-  my %grand = map { $_ => '<th class=listtotal>&nbsp;</th>' } @column_index;
-  for my $key (qw(amount due paid total)) {
+  # Non-total cells stay plain <td>, as in the stock total row.
+  my %grand = map { $_ => '<td>&nbsp;</td>' } @column_index;
+  for my $key (qw(amount due paid discount total)) {
     next unless exists $grand{$key};
-    my $value = $form->format_amount(\%myconfig, $totals{$key} || 0, ($form->{precision} || 2));
+    my $value = $totals{$key}
+      ? $form->format_amount(\%myconfig, $totals{$key}, ($form->{precision} || 2))
+      : '&nbsp;';
     $grand{$key} = qq|<th class=listtotal align=right>$value</th>|;
   }
   my $grand_row = join "\n", map { $grand{$_} } @column_index;
@@ -636,8 +660,8 @@ $hidden|;
   for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
     my $employee = $subtotal->{employee} || '';
     my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
-    my %sub = map { $_ => '<th class=listtotal>&nbsp;</th>' } @column_index;
-    $sub{employee} = qq|<th class=listtotal nowrap>$total_for_label $employee</th>| if exists $sub{employee};
+    my %sub = map { $_ => '<td>&nbsp;</td>' } @column_index;
+    $sub{invnumber} = qq|<th class=listtotal nowrap>$total_for_label $employee</th>| if exists $sub{invnumber};
     $sub{due} = qq|<th class=listtotal align=right>$amount</th>| if exists $sub{due};
     my $sub_row = join "\n", map { $sub{$_} } @column_index;
     $rows .= qq|
@@ -687,10 +711,45 @@ sub payment_footer {
 
   delete $button{'Back'} unless ($form->{view} || '') eq 'detail';
 
-  # Same separator as Cash -> Payments/Payment, above the button row.
+  if (!$latex) {
+    for ('Preview', 'Print') { delete $button{$_} }
+  }
+
+  # Cash -> Payments/Payment: format and media selectors sit above the buttons.
+  $form->{DF}{$form->{format}} = 'selected';
+  my $media = qq|<select name=media>
+	<option value=screen>|.$locale->text('Screen');
+  for (split /\n/, $form->unescape($form->{selectprinter} || '')) {
+    next unless $_;
+    $media .= qq|
+	  <option value="$_">$_|;
+  }
+  $media .= qq|</select>|;
+
+  my $format = qq|<select name=format>|;
+  if ($latex) {
+    $format .= qq|
+            <option value="ps" $form->{DF}{ps}>|.$locale->text('Postscript').qq|
+	    <option value="pdf" $form->{DF}{pdf}>|.$locale->text('PDF');
+  }
+  $format .= qq|</select>|;
+
+  if (!$latex) {
+    $format = '';
+    $media = '';
+  }
+
+  $media =~ s/(<option value="\Q$form->{media}\E")/$1 selected/;
+
   print qq|
   <tr>
     <td><hr size=3 noshade></td>
+  </tr>
+  <tr>
+    <td>
+    $format
+    $media
+    </td>
   </tr>
 </table>
 <p>
@@ -714,14 +773,12 @@ sub payment_footer {
 }
 
 sub preview {
-  $form->{format} = 'html';
   $form->{media} = 'screen';
   &commission_payment_print;
 }
 
 sub print {
-  $form->{format} = 'html';
-  $form->{media} = 'printer';
+  $form->{media} ||= 'printer';
   &commission_payment_print;
 }
 
@@ -729,6 +786,11 @@ sub commission_payment_print {
 
   $form->{title} = $locale->text('Payment Commission');
   $form->{language_code} = '' unless defined $form->{language_code};
+
+  if (!$latex && $form->{format} =~ /^(ps|pdf)$/) {
+    $form->{format} = 'html';
+  }
+  $form->{format} = 'html' unless $form->{format} =~ /^(html|ps|pdf)$/;
 
   for my $key (qw(cppay_row cppay_employee cppay_employeenumber
                   cppay_invnumber cppay_duedate cppay_amount cppay_due cppay_paid)) {
@@ -790,7 +852,8 @@ sub commission_payment_print {
   }
 
   $form->{templates} = "$templates/$myconfig{templates}";
-  $form->{IN} = 'commission_payment.html';
+  $form->{IN} = ($form->{format} =~ /^(ps|pdf)$/)
+    ? 'commission_payment.tex' : 'commission_payment.html';
   $form->{copies} = 1;
   $form->{bodyattr} = '';
 

@@ -272,6 +272,7 @@ sub update {
     $form->{"employee_$i"} = $p->{employee};
     $form->{"employee_id_$i"} = "$p->{employee}--$p->{employee_id}";
     $form->{"employeenumber_$i"} = $p->{employeenumber} || '';
+    $form->{"customer_$i"} = $p->{customer} || '';
     $form->{"amount_$i"} = $amount;
     $form->{"due_$i"} = $due;
     $form->{"paid_before_$i"} = $paid_before;
@@ -542,7 +543,7 @@ sub list_invoices {
   # Same column order as Cash -> Payment / Payments: the selection
   # checkbox sits after Due, immediately before Paid.
   my @column_index = $detail_view
-    ? qw(invnumber transdate duedate amount due checked paid discount total)
+    ? qw(invnumber customer transdate duedate amount due checked paid discount total)
     : qw(detail employee employeenumber amount due checked paid memo source);
   my $colspan = $#column_index + 1;
 
@@ -552,6 +553,7 @@ sub list_invoices {
     detail         => $locale->text('Detail'),
     employee       => $locale->text('Salesperson'),
     employeenumber => $locale->text('Salesperson Number'),
+    customer       => $locale->text('Customer'),
     invnumber      => $locale->text('Invoice'),
     memo           => $locale->text('Memo'),
     source         => $locale->text('Source'),
@@ -584,7 +586,7 @@ sub list_invoices {
     my $checked = $form->{"checked_$i"} ? 'checked' : '';
     my $save_header = $form->{header};
     $form->{header} = 0;
-    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id employeenumber
+    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id employeenumber customer
       invnumber transdate duedate gross deduction net amount due paid_before calcdiscount
       count groupids groupdues));
     $form->{header} = $save_header;
@@ -599,6 +601,7 @@ sub list_invoices {
     my $cells = $detail_view
       ? qq|
           <td>$form->{"invnumber_$i"}</td>
+          <td nowrap>$form->{"customer_$i"}</td>
           <td nowrap>$form->{"transdate_$i"}</td>
           <td nowrap>$form->{"duedate_$i"}</td>
           <td align=right>$form->{"amount_$i"}</td>

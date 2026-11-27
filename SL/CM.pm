@@ -269,11 +269,14 @@ sub outstanding {
 
   my $query = qq|
     SELECT p.*, e.name AS employee, e.employeenumber,
+           cu.name AS customer,
            p.net - p.paid AS due
     FROM commission_payable p
     JOIN employee e ON (e.id = p.employee_id)
+    LEFT JOIN ar a ON (a.id = p.ar_id)
+    LEFT JOIN customer cu ON (cu.id = a.customer_id)
     WHERE 1=1 $where
-    ORDER BY e.name, p.transdate, p.invnumber|;
+    ORDER BY e.name, cu.name, p.transdate, p.invnumber|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute;
 

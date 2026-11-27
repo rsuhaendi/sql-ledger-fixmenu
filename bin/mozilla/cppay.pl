@@ -782,8 +782,8 @@ sub commission_payment_print {
   $form->{title} = $locale->text('Payment Commission');
   $form->{language_code} = '' unless defined $form->{language_code};
 
-  # Populate the stock check/receipt template arrays.
-  for my $key (qw(invnumber invdate due paid)) { $form->{$key} = [] }
+  # Populate check/receipt template arrays. Commission check includes customer.
+  for my $key (qw(invnumber invdate due paid customer)) { $form->{$key} = [] }
 
   my $total_paid = 0;
   my $name = '';
@@ -799,8 +799,9 @@ sub commission_payment_print {
     $name ||= $form->{"employee_$i"} || '';
     $employee_key ||= $form->{"employee_id_$i"} || $form->{employee_id} || '';
 
-    push @{ $form->{invnumber} }, $form->{"invnumber_$i"} || '';
-    push @{ $form->{invdate} },   $form->{"transdate_$i"} || $form->{"duedate_$i"} || '';
+    push @{ $form->{invnumber} }, text_val($form->{"invnumber_$i"} || '');
+    push @{ $form->{customer} },  text_val($form->{"customer_$i"} || '');
+    push @{ $form->{invdate} },   text_val($form->{"transdate_$i"} || $form->{"duedate_$i"} || '');
     push @{ $form->{due} },       fmt_amount($form->parse_amount(\%myconfig, $form->{"due_$i"} || 0));
     push @{ $form->{paid} },      fmt_amount($paid);
     $d++;
@@ -857,7 +858,7 @@ sub commission_payment_print {
                           memo source text_amount text_decimal));
 
   $form->{templates} = "$templates/$myconfig{templates}";
-  $form->{formname} = 'check';
+  $form->{formname} = 'commission_check';
   $form->{IN} = "$form->{formname}.tex";
   $form->{copies} = 1;
 

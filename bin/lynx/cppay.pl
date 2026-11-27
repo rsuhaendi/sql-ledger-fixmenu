@@ -669,6 +669,15 @@ sub payment_footer {
 
   delete $button{'Back'} unless ($form->{view} || '') eq 'detail';
 
+  # Same separator as Cash -> Payments/Payment, above the button row.
+  print qq|
+  <tr>
+    <td><hr size=3 noshade></td>
+  </tr>
+</table>
+<p>
+|;
+
   $form->print_button(\%button);
 
   $form->hide_form(qw(helpref callback));

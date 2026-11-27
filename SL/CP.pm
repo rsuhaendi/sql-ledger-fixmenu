@@ -21,18 +21,33 @@ sub new {
 
   my $self = {};
 
-  if ($countrycode) {
-    if (-f "locale/$countrycode/Num2text") {
-      require "locale/$countrycode/Num2text";
-    } else {
-      use SL::Num2text;
+  my $load = sub {
+    my ($cc) = @_;
+    return 0 unless $cc;
+    my $file = "locale/$cc/Num2text";
+    return 0 unless -f $file;
+
+    open my $fh, '<', $file or return 0;
+    local $/;
+    my $src = <$fh>;
+    close $fh;
+    $src =~ s/^\x{FEFF}//;
+
+    my $pkg = "SL::Num2text::" . $cc;
+    $pkg =~ s/[^A-Za-z0-9_]/_/g;
+    eval qq{package $pkg; $src; 1} or return 0;
+    bless $self, $pkg;
+    return 1;
+  };
+
+  if (!$load->($countrycode)) {
+    if (!$load->('id')) {
+      require SL::Num2text;
+      bless $self, 'SL::Num2text';
     }
-  } else {
-    use SL::Num2text;
   }
 
-  bless $self, $type;
-
+  $self;
 }
 
 

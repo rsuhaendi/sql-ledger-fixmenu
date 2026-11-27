@@ -1,0 +1,106 @@
+#=====================================================================
+# SQL-Ledger ERP
+# Indonesian number-to-text for check/receipt printing
+#=====================================================================
+
+sub init {
+  my $self = shift;
+
+  %{ $self->{numbername} } = (
+      0 => 'nol',
+      1 => 'satu',
+      2 => 'dua',
+      3 => 'tiga',
+      4 => 'empat',
+      5 => 'lima',
+      6 => 'enam',
+      7 => 'tujuh',
+      8 => 'delapan',
+      9 => 'sembilan',
+     10 => 'sepuluh',
+     11 => 'sebelas',
+    100 => 'seratus',
+   1000 => 'seribu',
+  );
+}
+
+sub num2text {
+  my ($self, $amount) = @_;
+
+  $amount = int(abs($amount || 0));
+  return $self->{numbername}{0} unless $amount;
+
+  return $self->_id_num2text($amount);
+}
+
+sub _id_num2text {
+  my ($self, $n) = @_;
+
+  $n = int($n);
+  return '' if $n == 0;
+  return $self->{numbername}{$n} if exists $self->{numbername}{$n};
+
+  if ($n < 20) {
+    return $self->_id_num2text($n - 10) . ' belas';
+  }
+  if ($n < 100) {
+    my $tens = int($n / 10);
+    my $rem  = $n % 10;
+    my $out  = $self->_id_num2text($tens) . ' puluh';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 200) {
+    my $rem = $n - 100;
+    my $out = 'seratus';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 1000) {
+    my $hund = int($n / 100);
+    my $rem  = $n % 100;
+    my $out  = $self->_id_num2text($hund) . ' ratus';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 2000) {
+    my $rem = $n - 1000;
+    my $out = 'seribu';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 1_000_000) {
+    my $thou = int($n / 1000);
+    my $rem  = $n % 1000;
+    my $out  = $self->_id_num2text($thou) . ' ribu';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 1_000_000_000) {
+    my $mil = int($n / 1_000_000);
+    my $rem = $n % 1_000_000;
+    my $out = $self->_id_num2text($mil) . ' juta';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+  if ($n < 1_000_000_000_000) {
+    my $bil = int($n / 1_000_000_000);
+    my $rem = $n % 1_000_000_000;
+    my $out = $self->_id_num2text($bil) . ' miliar';
+    $out .= ' ' . $self->_id_num2text($rem) if $rem;
+    return $out;
+  }
+
+  my $tri = int($n / 1_000_000_000_000);
+  my $rem = $n % 1_000_000_000_000;
+  my $out = $self->_id_num2text($tri) . ' triliun';
+  $out .= ' ' . $self->_id_num2text($rem) if $rem;
+  return $out;
+}
+
+sub format_ten {
+  my ($self, $amount) = @_;
+  return $self->num2text($amount);
+}
+
+1;

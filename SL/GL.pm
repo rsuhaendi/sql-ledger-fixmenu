@@ -48,6 +48,14 @@ sub delete_transaction {
     $dbh->do($query) || $form->dberror($query);
   }
   
+  # If a commission payment GL is deleted, reset the linked commission rows
+  # so they reappear in Cash -> Payment Commission.
+  $dbh->do(qq|UPDATE commission_payable SET
+                paid = 0, paid_date = NULL, payment_accno = NULL,
+                payment_source = NULL, payment_id = NULL, gl_id = NULL,
+                accrual_posted = false
+              WHERE gl_id = $form->{id}|);
+
   $query = qq|DELETE FROM gl WHERE id = $form->{id}|;
   $dbh->do($query) || $form->dberror($query);
 
@@ -57,7 +65,7 @@ sub delete_transaction {
   
   my $id;
   for $id (qw(id apid)) {
-    for (qw(acc_trans dpt_trans yearend pay_trans status)) {
+    for (qw(acc_trans dpt_trans yearend pay_trans status payment)) {
       if ($form->{$id} *= 1) {
 	$query = qq|DELETE FROM $_ WHERE trans_id = $form->{$id}|;
 	$dbh->do($query) || $form->dberror($query);

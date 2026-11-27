@@ -107,7 +107,8 @@ sub report {
   $form->{vc} = 'vendor';
 
   $form->{datepaid} ||= $form->current_date(\%myconfig);
-  $form->{oldduedateto} = $form->{datepaid} unless defined $form->{oldduedateto};
+  $form->{oldduedatefrom} = $form->{duedatefrom} || '';
+  $form->{oldduedateto} = $form->{duedateto} || '';
   $form->{view} = 'list' unless $form->{view};
   if ($form->{view} eq 'list') {
     $form->{employee_id} = '';
@@ -122,9 +123,19 @@ sub report {
   $form->{oldexchangerate} = $form->{exchangerate};
   $form->{olddatepaid} = $form->{datepaid};
   $form->{oldall_sales} = $form->{all_sales} || '';
-  $form->{allbox} = 1 unless defined $form->{allbox};
+  $form->{exchangerate_display} = $form->format_amount(\%myconfig, $form->{exchangerate});
 
-  &update;
+  # Same as Cash -> Payments/Payment: open with an empty invoice table.
+  # Rows only appear after the user presses Update.
+  $form->{rowcount} = 0;
+  $form->{allbox} = 0;
+  $form->{CM_subtotal} = [];
+  $form->{amount} = '';
+  $form->{total_due} = '';
+
+  &payment_header;
+  &list_invoices;
+  &payment_footer;
 }
 
 sub update {
@@ -280,6 +291,8 @@ sub update {
   $form->{oldcurrency} = $form->{currency};
   $form->{oldexchangerate} = $form->{exchangerate};
   $form->{olddatepaid} = $form->{datepaid};
+  $form->{oldduedatefrom} = $form->{duedatefrom} || '';
+  $form->{oldduedateto} = $form->{duedateto} || '';
   $form->{oldall_sales} = $form->{all_sales} || '';
 
   &payment_header;

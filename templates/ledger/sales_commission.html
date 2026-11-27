@@ -40,27 +40,9 @@
 <%foreach cm_detail_customer%>
 <%if cm_detail_header%>
   <tr>
-    <td colspan=9>
+    <td colspan=9 align=left>
       <br>
-      <table>
-        <tr>
-          <td align=left nowrap><b>Salesperson:</b></td>
-          <td align=left><b><%cm_detail_name%></b></td>
-        </tr>
-        <tr>
-          <td align=left nowrap>Address:</td>
-          <td align=left><%cm_detail_address%></td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left><%cm_detail_customercount%> Customers</td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left><%cm_detail_paidcount%> Invoice Paid</td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left><%cm_detail_unpaidcount%> Invoice Unpaid</td>
-        </tr>
-      </table>
+      <b>Salesperson: <%cm_detail_name%></b> - <%cm_detail_address%> - <%cm_detail_customercount%> Customers <%cm_detail_paidcount%> Paid <%cm_detail_unpaidcount%> Unpaid
     </td>
   </tr>
 <%end cm_detail_header%>

@@ -409,28 +409,15 @@ sub render_report {
               : 'listrow'.($i % 2);
 
     if ($form->{cm_detail_header}[$i]) {
+      my $addr = $form->{cm_detail_address}[$i];
+      my $addr_part = ($addr ne '' && $addr ne '-') ? " - $addr" : '';
       print qq|
   <tr>
-    <td colspan=9>
-      <table>
-        <tr>
-          <td align=left nowrap><b>|.$locale->text('Salesperson').qq|:</b></td>
-          <td align=left><b>$form->{cm_detail_name}[$i]</b></td>
-        </tr>
-        <tr>
-          <td align=left nowrap>|.$locale->text('Address').qq|:</td>
-          <td align=left>$form->{cm_detail_address}[$i]</td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left>$form->{cm_detail_customercount}[$i] |.$locale->text('Customers').qq|</td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left>$form->{cm_detail_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>
-        </tr>
-        <tr>
-          <td colspan=2 align=left>$form->{cm_detail_unpaidcount}[$i] |.$locale->text('Invoice Unpaid').qq|</td>
-        </tr>
-      </table>
+    <td colspan=9 align=left>
+      <b>|.$locale->text('Salesperson').qq|: $form->{cm_detail_name}[$i]</b>$addr_part
+      - $form->{cm_detail_customercount}[$i] |.$locale->text('Customers').qq|
+      $form->{cm_detail_paidcount}[$i] |.$locale->text('Paid').qq|
+      $form->{cm_detail_unpaidcount}[$i] |.$locale->text('Unpaid').qq|
     </td>
   </tr>
 |;

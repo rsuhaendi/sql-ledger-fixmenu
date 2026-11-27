@@ -23,9 +23,7 @@
 <%foreach cm_detail_customer%>
 <%if cm_detail_header%>
 \hline
-\multicolumn{9}{|l|}{\textbf{Salesperson: <%cm_detail_name%>}} \\
-\multicolumn{9}{|l|}{Address: <%cm_detail_address%>} \\
-\multicolumn{9}{|l|}{<%cm_detail_customercount%> Customers \quad <%cm_detail_paidcount%> Invoice Paid \quad <%cm_detail_unpaidcount%> Invoice Unpaid} \\
+\multicolumn{9}{|l|}{\textbf{Salesperson: <%cm_detail_name%>} -- <%cm_detail_address%> -- <%cm_detail_customercount%> Customers \quad <%cm_detail_paidcount%> Paid \quad <%cm_detail_unpaidcount%> Unpaid} \\
 \hline
 <%end cm_detail_header%>
 <%if cm_detail_row%>

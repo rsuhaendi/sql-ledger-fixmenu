@@ -468,10 +468,10 @@ sub save_employee {
   $form->{commission_amount} = $form->parse_amount($myconfig, $form->{commission_amount});
 
   if (!defined $form->{commission_deduction} || $form->{commission_deduction} eq '') {
-    $form->{commission_deduction} = defined $current_deduction ? $current_deduction : 10;
+    $form->{commission_deduction} = 0;
   } else {
     $form->{commission_deduction} = $form->parse_amount($myconfig, $form->{commission_deduction});
-    $form->{commission_deduction} = 10
+    $form->{commission_deduction} = 0
       unless $form->{commission_deduction} =~ /^\d+(\.\d+)?$/ && $form->{commission_deduction} >= 0 && $form->{commission_deduction} <= 100;
   }
   

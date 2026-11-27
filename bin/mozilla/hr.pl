@@ -462,7 +462,7 @@ sub prepare_employee {
   HR->get_employee(\%myconfig, \%$form);
 
   $form->{commission_amount} = $form->format_amount(\%myconfig, $form->{commission_amount}, ($form->{precision} || 2));
-  $form->{commission_deduction} = 10
+  $form->{commission_deduction} = 0
     unless defined $form->{commission_deduction} && $form->{commission_deduction} ne '';
   $form->{commission_deduction} = $form->format_amount(\%myconfig, $form->{commission_deduction}, 2);
 

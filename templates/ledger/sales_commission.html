@@ -44,38 +44,24 @@
       <br>
       <table>
         <tr>
-          <th align=left nowrap>Salesperson:</th>
-          <td><b><%cm_detail_name%></b></td>
+          <td align=left nowrap><b>Salesperson:</b></td>
+          <td align=left><b><%cm_detail_name%></b></td>
         </tr>
         <tr>
           <td align=left nowrap>Address:</td>
-          <td><%cm_detail_address%></td>
+          <td align=left><%cm_detail_address%></td>
         </tr>
         <tr>
-          <td colspan=2><%cm_detail_customercount%> Customers</td>
+          <td colspan=2 align=left><%cm_detail_customercount%> Customers</td>
         </tr>
         <tr>
-          <td colspan=2><%cm_detail_paidcount%> Invoice Paid</td>
+          <td colspan=2 align=left><%cm_detail_paidcount%> Invoice Paid</td>
         </tr>
         <tr>
-          <td colspan=2><%cm_detail_unpaidcount%> Invoice Unpaid</td>
+          <td colspan=2 align=left><%cm_detail_unpaidcount%> Invoice Unpaid</td>
         </tr>
       </table>
     </td>
-  </tr>
-  <tr>
-    <th align=left>Customer</th>
-    <th align=left>Invoice</th>
-    <th align=left>Period</th>
-    <th align=left>Transaction Date</th>
-    <th align=left>Paid Date</th>
-    <th align=left>Status Paid</th>
-    <th align=right>Gross</th>
-    <th align=right>Deduction</th>
-    <th align=right>Net</th>
-  </tr>
-  <tr>
-    <td colspan=9><hr noshade size=1></td>
   </tr>
 <%end cm_detail_header%>
 <%if cm_detail_row%>

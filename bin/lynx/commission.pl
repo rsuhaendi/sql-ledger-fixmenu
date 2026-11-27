@@ -412,37 +412,26 @@ sub render_report {
       print qq|
   <tr>
     <td colspan=9>
-      <table width=100%>
+      <table>
         <tr>
-          <th align=left nowrap>|.$locale->text('Salesperson').qq|:</th>
-          <td><b>$form->{cm_detail_name}[$i]</b></td>
+          <td align=left nowrap><b>|.$locale->text('Salesperson').qq|:</b></td>
+          <td align=left><b>$form->{cm_detail_name}[$i]</b></td>
         </tr>
         <tr>
           <td align=left nowrap>|.$locale->text('Address').qq|:</td>
-          <td>$form->{cm_detail_address}[$i]</td>
+          <td align=left>$form->{cm_detail_address}[$i]</td>
         </tr>
         <tr>
-          <td colspan=2>$form->{cm_detail_customercount}[$i] |.$locale->text('Customers').qq|</td>
+          <td colspan=2 align=left>$form->{cm_detail_customercount}[$i] |.$locale->text('Customers').qq|</td>
         </tr>
         <tr>
-          <td colspan=2>$form->{cm_detail_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>
+          <td colspan=2 align=left>$form->{cm_detail_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>
         </tr>
         <tr>
-          <td colspan=2>$form->{cm_detail_unpaidcount}[$i] |.$locale->text('Invoice Unpaid').qq|</td>
+          <td colspan=2 align=left>$form->{cm_detail_unpaidcount}[$i] |.$locale->text('Invoice Unpaid').qq|</td>
         </tr>
       </table>
     </td>
-  </tr>
-  <tr class=listheading>
-    <th>|.$locale->text('Customer').qq|</th>
-    <th>|.$locale->text('Invoice').qq|</th>
-    <th>|.$locale->text('Period').qq|</th>
-    <th>|.$locale->text('Transaction Date').qq|</th>
-    <th>|.$locale->text('Paid Date').qq|</th>
-    <th>|.$locale->text('Status Paid').qq|</th>
-    <th align=right>|.$locale->text('Gross').qq|</th>
-    <th align=right>|.$locale->text('Deduction').qq|</th>
-    <th align=right>|.$locale->text('Net').qq|</th>
   </tr>
 |;
     } elsif ($form->{cm_detail_subtotal}[$i] || $form->{cm_detail_grand}[$i]) {

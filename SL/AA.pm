@@ -1047,6 +1047,10 @@ sub transactions {
   
   delete $curr{$form->{defaultcurrency}};
   $form->{currencies} = join ':', sort (keys %curr);
+
+  if ($form->{vc} eq 'vendor' && $form->{outstanding}) {
+    CM->ap_outstanding($myconfig, $form, $dbh);
+  }
   
   $sth->finish;
   $dbh->disconnect;

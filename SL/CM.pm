@@ -420,4 +420,118 @@ sub pay {
   return (1, undef, 0);
 }
 
+sub _fmt_date {
+  my ($form, $myconfig, $date) = @_;
+  return '' unless $date;
+
+  my $iso = $date;
+  $iso =~ s/\D//g;
+  return $iso =~ /^\d{8}$/
+    ? $form->format_date($myconfig->{dateformat}, $iso) : $date;
+}
+
+# Show commission liabilities in the standard AP Outstanding report without
+# turning them into AP invoices.  Payment stays in Cash -> Payment Commission,
+# so these rows are display-only in AP.
+sub ap_outstanding {
+  my ($self, $myconfig, $form, $dbh) = @_;
+
+  return unless $form->{vc} eq 'vendor';
+
+  my @where;
+
+  my $employee_id = _employee_id($form->{employee});
+  push @where, "p.employee_id = $employee_id" if $employee_id;
+
+  if ($form->{vendor}) {
+    my $name = $form->like(lc $form->{vendor});
+    push @where, "lower(e.name) LIKE ".$dbh->quote($name);
+  }
+
+  if ($form->{invnumber}) {
+    my $inv = $form->like(lc $form->{invnumber});
+    push @where, "lower(p.invnumber) LIKE ".$dbh->quote($inv);
+  }
+
+  push @where, "p.transdate >= ".$dbh->quote($form->{transdatefrom}) if $form->{transdatefrom};
+  push @where, "p.transdate <= ".$dbh->quote($form->{transdateto})   if $form->{transdateto};
+
+  if ($form->{open} && !$form->{closed}) {
+    push @where, "p.paid < p.net - 0.005";
+  } elsif ($form->{closed} && !$form->{open}) {
+    push @where, "p.paid >= p.net - 0.005";
+  } elsif ($form->{outstanding}) {
+    push @where, "p.paid < p.net - 0.005";
+  }
+
+  my $where = @where ? 'WHERE '.join(' AND ', @where) : '';
+
+  my $query = qq|
+    SELECT p.*, e.name AS employee
+    FROM commission_payable p
+    JOIN employee e ON (e.id = p.employee_id)
+    $where
+    ORDER BY p.transdate, p.invnumber|;
+
+  my $sth = $dbh->prepare($query) || $form->dberror($query);
+  $sth->execute;
+
+  while (my $p = $sth->fetchrow_hashref(NAME_lc)) {
+    my $transdate = _fmt_date($form, $myconfig, $p->{transdate});
+    my $datepaid  = _fmt_date($form, $myconfig, $p->{paid_date});
+    my $amount    = $p->{net} * 1;
+    my $paid      = $p->{paid} * 1;
+
+    push @{ $form->{transactions} }, {
+      id            => -$p->{id},
+      commission    => 1,
+      invnumber     => $p->{invnumber} || 'Commission',
+      ordnumber     => '',
+      transdate     => $transdate,
+      duedate       => $transdate,
+      datepaid      => $datepaid,
+      amount        => $amount,
+      paid          => $paid,
+      netamount     => $amount,
+      due           => $amount - $paid,
+      tax           => 0,
+      invoice       => 0,
+      till          => '',
+      employee      => $p->{employee},
+      name          => $p->{employee},
+      vendor_id     => 0,
+      curr          => $form->{defaultcurrency} || 'IDR',
+      exchangerate  => 1,
+      notes         => 'Sales commission',
+      description   => 'Sales commission',
+      memo          => '',
+      source        => $p->{payment_source} || '',
+      accno         => $p->{payment_accno} || '2290',
+      department    => '',
+      ponumber      => '',
+      shipvia       => '',
+      waybill       => '',
+      shippingpoint => '',
+      warehouse     => '',
+      paymentmethod => '',
+      taxnumber     => '',
+      paymentaccount=> '',
+      projectnumber => '',
+      address       => '',
+      address1      => '',
+      address2      => '',
+      city          => '',
+      zipcode       => '',
+      country       => '',
+      dcn           => '',
+      paymentdiff   => 0,
+      debit         => 0,
+      credit        => 0,
+      linetotal     => 0,
+    };
+  }
+
+  $sth->finish;
+}
+
 1;

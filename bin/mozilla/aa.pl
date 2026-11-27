@@ -2257,7 +2257,7 @@ sub transactions {
     
     $column_data{runningnumber} = "<td align=right>$i</td>";
 
-    if ($ref->{paid}) {
+    if ($ref->{commission} || $ref->{paid}) {
       $column_data{delete} = qq|<td>&nbsp;</td>|;
     } else {
       $column_data{delete} = qq|<td><input name="id_$i" class=checkbox type=checkbox value=$ref->{id} $checked{$i}></td>
@@ -2286,7 +2286,11 @@ sub transactions {
     $module = ($ref->{invoice}) ? ($form->{ARAP} eq 'AR') ? "is.pl" : "ir.pl" : $form->{script};
     $module = ($ref->{till}) ? "ps.pl" : $module;
 
-    $column_data{invnumber} = "<td><a href=$module?action=edit&id=$ref->{id}&path=$form->{path}&login=$form->{login}&callback=$callback>$ref->{invnumber}&nbsp;</a></td>";
+    if ($ref->{commission}) {
+      $column_data{invnumber} = "<td>$ref->{invnumber}&nbsp;</td>";
+    } else {
+      $column_data{invnumber} = "<td><a href=$module?action=edit&id=$ref->{id}&path=$form->{path}&login=$form->{login}&callback=$callback>$ref->{invnumber}&nbsp;</a></td>";
+    }
     
     for (qw(notes description memo)) { $ref->{$_} =~ s/\r?\n/<br>/g }
     for (qw(transdate datepaid duedate)) { $column_data{$_} = "<td nowrap>$ref->{$_}&nbsp;</td>" }
@@ -2301,7 +2305,11 @@ sub transactions {
 
     for (qw(id curr accno)) { $column_data{$_} = "<td>$ref->{$_}</td>" }
 
-    $column_data{name} = qq|<td><a href=ct.pl?path=$form->{path}&login=$form->{login}&action=edit&id=$ref->{"$form->{vc}_id"}&db=$form->{vc}&callback=$callback>$ref->{name}</a></td>|;
+    if ($ref->{commission}) {
+      $column_data{name} = "<td>$ref->{name}&nbsp;</td>";
+    } else {
+      $column_data{name} = qq|<td><a href=ct.pl?path=$form->{path}&login=$form->{login}&action=edit&id=$ref->{"$form->{vc}_id"}&db=$form->{vc}&callback=$callback>$ref->{name}</a></td>|;
+    }
    
     if ($ref->{id} != $sameid) {
       $j++; $j %= 2;

@@ -1,6 +1,7 @@
 require "$form->{path}/js.pl";
 
 use SL::CM;
+use SL::CP;
 
 1;
 
@@ -481,10 +482,9 @@ HTML
                       defaultcurrency employee_id employeenumber payment_accno currency
                       exchangerate oldcurrency oldexchangerate olddatepaid
                       oldduedatefrom oldduedateto
-                      datepaid duedatefrom duedateto source memo oldall_sales view rowcount
-                      media format));
+                      datepaid duedatefrom duedateto source memo oldall_sales view rowcount));
   $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
-                      selectdepartment selectcurrency selectprinter));
+                      selectdepartment selectcurrency));
   $form->hide_form(qw(address1 address2 city state zipcode country));
 
   print <<"HTML";
@@ -665,6 +665,8 @@ $grand_row
 
 sub payment_footer {
 
+  my $detail = (($form->{view} || '') eq 'detail');
+
   my %button = (
     'Update'       => { ndx => 1, key => 'U', value => $locale->text('Update') },
     'Select all'   => { ndx => 2, key => 'A', value => $locale->text('Select all') },
@@ -681,13 +683,14 @@ sub payment_footer {
     delete $button{'Deselect all'};
   }
 
-  delete $button{'Back'} unless ($form->{view} || '') eq 'detail';
+  delete $button{'Back'} unless $detail;
 
   if (!$latex) {
     for ('Preview', 'Print') { delete $button{$_} }
   }
 
-  # Cash -> Payments/Payment: format and media selectors sit above the buttons.
+  # Same selectors as Cash -> Payments/Payments and Cash -> Payment/Receipt.
+  delete $form->{DF};
   $form->{DF}{$form->{format}} = 'selected';
   my $media = qq|<select name=media>
 	<option value=screen>|.$locale->text('Screen');
@@ -716,7 +719,11 @@ sub payment_footer {
   print qq|
   <tr>
     <td><hr size=3 noshade></td>
-  </tr>
+  </tr>|;
+
+  if ($detail) {
+    # Detail view: format/media above the buttons, like Cash -> Payment.
+    print qq|
   <tr>
     <td>
     $format
@@ -726,8 +733,18 @@ sub payment_footer {
 </table>
 <p>
 |;
-
-  $form->print_button(\%button);
+    $form->print_button(\%button);
+  } else {
+    # List view: buttons first, then format/media, like Cash -> Receipts.
+    print qq|
+</table>
+|;
+    $form->print_button(\%button);
+    print qq|
+  $format
+  $media
+|;
+  }
 
   $form->hide_form(qw(helpref callback));
 
@@ -745,12 +762,15 @@ sub payment_footer {
 }
 
 sub preview {
+  # Cash -> Payment/Receipt: Preview always renders a PDF on screen.
+  $form->{format} = 'pdf';
   $form->{media} = 'screen';
-  &commission_payment_print;
+  &print;
 }
 
 sub print {
-  $form->{media} ||= 'printer';
+  $form->error($locale->text('Select postscript or PDF!'))
+    if ($form->{format} !~ /(ps|pdf)/);
   &commission_payment_print;
 }
 
@@ -759,59 +779,52 @@ sub commission_payment_print {
   $form->{title} = $locale->text('Payment Commission');
   $form->{language_code} = '' unless defined $form->{language_code};
 
-  if (!$latex && $form->{format} =~ /^(ps|pdf)$/) {
-    $form->{format} = 'html';
-  }
-  $form->{format} = 'html' unless $form->{format} =~ /^(html|ps|pdf)$/;
+  # Populate the stock check/receipt template arrays.
+  for my $key (qw(invnumber invdate due paid)) { $form->{$key} = [] }
 
-  for my $key (qw(cppay_row cppay_employee cppay_employeenumber
-                  cppay_invnumber cppay_duedate cppay_amount cppay_due cppay_paid)) {
-    $form->{$key} = [];
-  }
-
-  my ($total_amount, $total_due, $total_paid) = (0, 0, 0);
+  my $total_paid = 0;
+  my $name = '';
+  my $employee_key = '';
   my $d = 0;
 
   for my $i (1 .. ($form->{rowcount} || 0)) {
     next unless $form->{"checked_$i"};
 
-    my $amount = $form->parse_amount(\%myconfig, $form->{"amount_$i"} || 0);
-    my $due = $form->parse_amount(\%myconfig, $form->{"due_$i"} || 0);
     my $paid = $form->parse_amount(\%myconfig, $form->{"paid_$i"} || 0);
-
-    $total_amount += $amount;
-    $total_due += $due;
     $total_paid += $paid;
 
-    $form->{cppay_row}[$d] = 1;
-    $form->{cppay_employee}[$d] = text_val($form->{"employee_$i"});
-    $form->{cppay_employeenumber}[$d] = text_val($form->{"employeenumber_$i"});
-    $form->{cppay_invnumber}[$d] = text_val($form->{"invnumber_$i"});
-    $form->{cppay_duedate}[$d] = text_val($form->{"duedate_$i"});
-    $form->{cppay_amount}[$d] = fmt_amount($amount);
-    $form->{cppay_due}[$d] = fmt_amount($due);
-    $form->{cppay_paid}[$d] = fmt_amount($paid);
+    $name ||= $form->{"employee_$i"} || '';
+    $employee_key ||= $form->{"employee_id_$i"} || $form->{employee_id} || '';
+
+    push @{ $form->{invnumber} }, $form->{"invnumber_$i"} || '';
+    push @{ $form->{invdate} },   $form->{"transdate_$i"} || $form->{"duedate_$i"} || '';
+    push @{ $form->{due} },       fmt_amount($form->parse_amount(\%myconfig, $form->{"due_$i"} || 0));
+    push @{ $form->{paid} },      fmt_amount($paid);
     $d++;
   }
 
   $form->error($locale->text('Nothing to print!')) unless $d;
 
-  $form->{cppay_total_amount} = fmt_amount($total_amount);
-  $form->{cppay_total_due} = fmt_amount($total_due);
-  $form->{cppay_total_paid} = fmt_amount($total_paid);
-
-  my @caption = (
-    $locale->text('Date').': '.text_val($form->{datepaid}),
-    $locale->text('Payment').': '.text_val($form->{payment_accno}),
-    $locale->text('Currency').': '.text_val($form->{currency}),
-  );
-  push @caption, $locale->text('Source').': '.text_val($form->{source})
-    if $form->{source};
-  push @caption, $locale->text('Memo').': '.text_val($form->{memo})
-    if $form->{memo};
-  $form->{cppay_caption} = join ' | ', @caption;
+  my ($employee_id) = $employee_key =~ /(\d+)\s*$/;
+  $form->{name} = $name || (split /--/, ($form->{employee_id} || ''))[0] || '';
+  for (qw(source memo)) { $form->{$_} ||= '' }
 
   my $dbh = $form->dbconnect(\%myconfig);
+
+  if ($employee_id && !$form->{address1}) {
+    my $sth = $dbh->prepare(qq|SELECT address1, address2, city, state, zipcode, country
+                               FROM address WHERE trans_id = $employee_id ORDER BY id|);
+    if ($sth) {
+      $sth->execute;
+      if (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+        for (qw(address1 address2 city state zipcode country)) {
+          $form->{$_} = $ref->{$_} || '';
+        }
+      }
+      $sth->finish;
+    }
+  }
+
   my %defaults = $form->get_defaults($dbh,
     [qw(company address tel fax companyemail companywebsite)]);
   my %printers = $form->get_defaults($dbh, ['printer_%']);
@@ -823,21 +836,33 @@ sub commission_payment_print {
     $form->{"${label}_printer"} = $printers{$_};
   }
 
-  $form->{templates} = "$templates/$myconfig{templates}";
-  $form->{IN} = ($form->{format} =~ /^(ps|pdf)$/)
-    ? 'commission_payment.tex' : 'commission_payment.html';
-  $form->{copies} = 1;
-  $form->{bodyattr} = '';
+  # Same amount-in-words handling as Cash -> Payment/Receipt.
+  my ($whole, $decimal) = split /\./, sprintf('%.2f', $total_paid);
+  $decimal .= '00';
+  $decimal = substr($decimal, 0, 2);
 
-  if ($form->{media} eq 'printer') {
-    if ($form->{Printer_printer}) {
-      $form->{OUT} = "| $form->{Printer_printer}";
-    } else {
-      $form->{bodyattr} = ' onload="window.print()"';
-    }
+  my $c = CP->new(($form->{language_code}) ? $form->{language_code} : $myconfig{countrycode});
+  $c->init;
+  $form->{text_decimal} = $c->num2text($decimal * 1);
+  $form->{text_amount} = $c->num2text($whole);
+  $form->{decimal} = $decimal;
+  $form->{amount} = fmt_amount($total_paid);
+  $form->{datepaid} = $locale->date(\%myconfig, $form->{datepaid});
+
+  $form->format_string(qw(company address companyemail companywebsite
+                          name address1 address2 city state zipcode country
+                          memo source text_amount text_decimal));
+
+  $form->{templates} = "$templates/$myconfig{templates}";
+  $form->{formname} = 'check';
+  $form->{IN} = "$form->{formname}.tex";
+  $form->{copies} = 1;
+
+  if ($form->{media} ne 'screen') {
+    my $printer = $form->{"$form->{media}_printer"} || '';
+    $form->{OUT} = "| $printer" if $printer;
   }
 
-  $form->format_string(qw(company address tel fax companyemail companywebsite));
   $form->parse_template(\%myconfig, $userspath, $dvipdf, $xelatex);
 }
 

@@ -504,8 +504,8 @@ sub save_employee {
 	      WHERE id = $form->{id}|;
   $dbh->do($query) || $form->dberror($query);
 
-  require "SL/CM.pm";
-  CM->recalculate_deduction($dbh, $form->{id}, $form->{commission_deduction});
+  # Commission deduction is prospective: future commission postings use the
+  # employee's current deduction. Existing commission/GL history is unchanged.
 
   # add address
   my $id;

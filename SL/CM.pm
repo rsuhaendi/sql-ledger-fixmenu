@@ -8,38 +8,91 @@ sub recalculate_deduction {
   my ($self, $dbh, $employee_id, $deduction) = @_;
 
   return unless $dbh && $employee_id && $employee_id =~ /^\d+$/;
-  $deduction = 10
+  $deduction = 0
     unless defined $deduction && $deduction =~ /^\d+(\.\d+)?$/ && $deduction >= 0 && $deduction <= 100;
 
   my $sth = $dbh->prepare(qq|
-    SELECT p.id, p.ar_id, p.gross
-    FROM commission_payable p
-    WHERE p.employee_id = $employee_id
-      AND p.paid < 0.005
-      AND p.accrual_posted = false|) || return 0;
+    SELECT id, ar_id, gross, deduction, net, paid, accrual_posted
+    FROM commission_payable
+    WHERE employee_id = $employee_id
+    FOR UPDATE|) || return 0;
   $sth->execute || return 0;
 
   my @rows;
-  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
-    push @rows, $ref;
-  }
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) { push @rows, $ref }
   $sth->finish;
 
   my $rate = sprintf("%.2f", $deduction);
+  my $delta_total = 0;
+  my $changed = 0;
+
   for my $ref (@rows) {
     my $gross = $ref->{gross} * 1;
-    my $net = sprintf("%.2f", $gross * (1 - $rate / 100));
-    my $cut = sprintf("%.2f", $gross - $net);
+    my $new_net = sprintf("%.2f", $gross * (1 - $rate / 100));
+    my $new_cut = sprintf("%.2f", $gross - $new_net);
+    my $old_net = $ref->{net} * 1;
+    my $delta = sprintf("%.2f", $new_net - $old_net);
+    next if abs($delta) < 0.005;
+
+    # Do not reduce net below amount already paid.
+    my $paid = $ref->{paid} * 1;
+    if ($new_net + 0.005 < $paid) {
+      $new_net = sprintf("%.2f", $paid);
+      $new_cut = sprintf("%.2f", $gross - $new_net);
+      $delta = sprintf("%.2f", $new_net - $old_net);
+      next if abs($delta) < 0.005;
+    }
 
     $dbh->do(qq|UPDATE commission_payable
-                   SET deduction = $cut, net = $net
+                   SET deduction = $new_cut, net = $new_net
                  WHERE id = $ref->{id}|);
     $dbh->do(qq|UPDATE ar
-                   SET commission_deduction = $rate, commission_net = $net
-                 WHERE id = $ref->{ar_id}|);
+                   SET commission_deduction = $rate, commission_net = $new_net
+                 WHERE id = $ref->{ar_id}|) if $ref->{ar_id};
+
+    # Rows already accrued/paid need a GL adjustment so books stay balanced.
+    if ($ref->{accrual_posted} || $paid > 0.005) {
+      $delta_total += $delta;
+    }
+    $changed++;
   }
 
-  scalar @rows;
+  if (abs($delta_total) >= 0.005) {
+    $dbh->do(qq|INSERT INTO defaults (fldname, fldvalue)
+                SELECT 'glnumber', '1'
+                WHERE NOT EXISTS (SELECT 1 FROM defaults WHERE fldname='glnumber')|);
+    my ($refno) = $dbh->selectrow_array(
+      qq|SELECT fldvalue FROM defaults WHERE fldname='glnumber' FOR UPDATE|);
+    $refno ||= 1;
+    $dbh->do(qq|UPDATE defaults SET fldvalue = ? WHERE fldname='glnumber'|, undef, $refno + 1);
+
+    my ($glid) = $dbh->selectrow_array(qq|SELECT nextval('id')|);
+    my $desc = $dbh->quote('Commission Deduction Adjustment');
+    my $memo = $dbh->quote("Deduction changed to $rate%");
+    my $ref_q = $dbh->quote($refno);
+    $dbh->do(qq|INSERT INTO gl (id, reference, description, transdate, employee_id, notes, approved)
+                VALUES ($glid, $ref_q, $desc, CURRENT_DATE, $employee_id, $memo, 't')|);
+
+    my ($acc2290) = $dbh->selectrow_array("SELECT id FROM chart WHERE accno='2290'");
+    my ($acc4490) = $dbh->selectrow_array("SELECT id FROM chart WHERE accno='4490'");
+    my $amt = sprintf("%.2f", abs($delta_total));
+    my $src = $dbh->quote('Commission Deduction Adjustment');
+    if ($delta_total > 0) {
+      # Net increased: reverse part of deduction income, increase payable.
+      $dbh->do(qq|INSERT INTO acc_trans (trans_id, chart_id, amount, transdate, source, memo, approved)
+                  VALUES ($glid, $acc2290, $amt, CURRENT_DATE, $src, $memo, 't')|);
+      $dbh->do(qq|INSERT INTO acc_trans (trans_id, chart_id, amount, transdate, source, memo, approved)
+                  VALUES ($glid, $acc4490, -$amt, CURRENT_DATE, $src, $memo, 't')|);
+    } else {
+      # Net decreased: reduce payable, restore deduction income.
+      $dbh->do(qq|INSERT INTO acc_trans (trans_id, chart_id, amount, transdate, source, memo, approved)
+                  VALUES ($glid, $acc2290, -$amt, CURRENT_DATE, $src, $memo, 't')|);
+      $dbh->do(qq|INSERT INTO acc_trans (trans_id, chart_id, amount, transdate, source, memo, approved)
+                  VALUES ($glid, $acc4490, $amt, CURRENT_DATE, $src, $memo, 't')|);
+    }
+  }
+
+  $changed;
 }
 
 sub setting_db {

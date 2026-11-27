@@ -2348,7 +2348,11 @@ sub aging {
     
     if ($vc_id != $ref->{vc_id}) {
 
-      $column_data{vc} = qq|<td><a href=ct.pl?path=$form->{path}&login=$form->{login}&action=edit&id=$ref->{vc_id}&db=$form->{vc}&callback=$callback>$ref->{name}</a></td>|;
+      my $vc_href = "ct.pl?path=$form->{path}&login=$form->{login}&action=edit&id=$ref->{vc_id}&db=$form->{vc}&callback=$callback";
+      if (($form->{arap} || '') eq 'ap' && ($ref->{invdescription} || '') eq 'Sales commission') {
+        $vc_href = "hr.pl?path=$form->{path}&login=$form->{login}&action=edit&db=employee&id=$ref->{vc_id}&callback=$callback";
+      }
+      $column_data{vc} = qq|<td><a href=$vc_href>$ref->{name}</a></td>|;
       $column_data{"$form->{vc}number"} = qq|<td>$ref->{"$form->{vc}number"}</td>|;
 
       if ($form->{selectlanguage}) {
@@ -2384,9 +2388,14 @@ sub aging {
 
     $column_data{total} = qq|<td align=right>|.$form->format_amount(\%myconfig, $linetotal, $form->{precision}, "&nbsp;").qq|</td>|;
 
-    $href = qq|$ref->{module}.pl?path=$form->{path}&action=edit&id=$ref->{id}&login=$form->{login}&callback=|.$form->escape($form->{callback});
-    
-    $column_data{invnumber} = qq|<td><a href=$href>$ref->{invnumber}</a></td>|;
+    my $inv_cell = $ref->{invnumber};
+    if (($form->{arap} || '') eq 'ap' && ($ref->{invdescription} || '') eq 'Sales commission') {
+      $inv_cell = qq|<td>$ref->{invnumber}</td>|;
+    } else {
+      $href = qq|$ref->{module}.pl?path=$form->{path}&action=edit&id=$ref->{id}&login=$form->{login}&callback=|.$form->escape($form->{callback});
+      $inv_cell = qq|<td><a href=$href>$ref->{invnumber}</a></td>|;
+    }
+    $column_data{invnumber} = $inv_cell;
     $column_data{ordnumber} = qq|<td>$ref->{ordnumber}</td>|;
     for (qw(transdate duedate)) { $column_data{$_} = qq|<td nowrap>$ref->{$_}</td>| }
     

@@ -605,10 +605,15 @@ sub ap_aging {
   my @active = grep { $form->{$_} } @buckets;
   @active = @buckets unless @active;
 
+  my $curr = $form->{defaultcurrency} || 'IDR';
+  my %sel_curr = map { $_ => 1 } split /:/, ($form->{currencies} || $curr);
+  return unless $sel_curr{$curr};
+
   my $to = $form->{todate};
   $to =~ s/\D//g;
   $to = substr($to, 0, 8);
 
+  my @add;
   while (my $p = $sth->fetchrow_hashref(NAME_lc)) {
     my $due = ($p->{net} || 0) - ($p->{paid} || 0);
     next unless $due > 0.005;
@@ -644,14 +649,22 @@ sub ap_aging {
       duedate       => _fmt_date($form, $myconfig, $p->{transdate}),
       invoice       => 0,
       id            => -$p->{id},
-      curr          => $form->{defaultcurrency} || 'IDR',
+      curr          => $curr,
       exchangerate  => 1,
+      language_code => '',
       firstname     => '', lastname => '', salutation => '', typeofcontact => '',
     };
     for (@buckets) { $ref->{$_} = ($_ eq $bucket) ? $due : 0 }
-    push @{ $form->{AG} }, $ref;
+    push @add, $ref;
   }
   $sth->finish;
+
+  push @{ $form->{AG} }, @add;
+  @{ $form->{AG} } = sort {
+    ($a->{vc_id} <=> $b->{vc_id})
+    || (($a->{transdate} || '') cmp ($b->{transdate} || ''))
+    || (($a->{invnumber} || '') cmp ($b->{invnumber} || ''))
+  } @{ $form->{AG} };
 }
 
 sub _days_between {

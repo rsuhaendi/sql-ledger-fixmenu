@@ -151,7 +151,6 @@ sub report {
   # Rows only appear after the user presses Update.
   $form->{rowcount} = 0;
   $form->{allbox} = 0;
-  $form->{CM_subtotal} = [];
   $form->{amount} = '';
   $form->{total_due} = '';
 
@@ -213,7 +212,6 @@ sub update {
   my $checked = 0;
   my $total_due = 0;
   my $total_paid = 0;
-  my @subtotal;
 
   my $detail = (($form->{view} || '') eq 'detail');
   my @sources;
@@ -299,21 +297,12 @@ sub update {
 
     $total_due += $base_due / $rate;
 
-    if ($detail) {
-      my $employee = $p->{employee} || '';
-      if (!@subtotal || $subtotal[-1]{employee} ne $employee) {
-        push @subtotal, { employee => $employee, amount => 0 };
-      }
-      $subtotal[-1]{amount} += $base_due / $rate;
-    }
-
     if ($is_checked) {
       $checked++;
       $total_paid += $form->parse_amount(\%myconfig, $paid);
     }
   }
 
-  $form->{CM_subtotal} = \@subtotal;
   $form->{total_due} = $form->format_amount(\%myconfig, $total_due, ($form->{precision} || 2));
   $form->{rowcount} = $i;
   $form->{allbox} = ($i && $checked == $i) ? 1 : 0;
@@ -586,9 +575,6 @@ sub list_invoices {
     $head .= "\n";
   }
 
-  my $total_for_label = $locale->text('Total for');
-  my $total_label = $locale->text('Total');
-
   my $rows = '';
   my $j = 0;
   my %totals;
@@ -655,21 +641,7 @@ $hidden|;
   }
   my $grand_row = join "\n", map { $grand{$_} } @column_index;
 
-  # Invoice-level subtotals only in the single-salesperson detail view;
-  # in the list view each salesperson row is already a subtotal.
-  for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
-    my $employee = $subtotal->{employee} || '';
-    my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
-    my %sub = map { $_ => '<td>&nbsp;</td>' } @column_index;
-    $sub{invnumber} = qq|<th class=listtotal nowrap>$total_for_label $employee</th>| if exists $sub{invnumber};
-    $sub{due} = qq|<th class=listtotal align=right>$amount</th>| if exists $sub{due};
-    my $sub_row = join "\n", map { $sub{$_} } @column_index;
-    $rows .= qq|
-        <tr class=listsubtotal>
-$sub_row
-        </tr>|;
-  }
-
+  # Cash -> Payment has one total row only; no per-salesperson subtotal.
   print qq|
   <tr>
     <td>

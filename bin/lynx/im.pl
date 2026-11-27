@@ -3228,7 +3228,7 @@ if (document.addEventListener) {
         <tr>
           <th align="right">|.$locale->text('Date Prepared').qq|</th>
           <td>
-            <input name=dateprepared size=11 value="$form->{dateprepared}" title="$myconfig{dateformat}">|.&js_calendar("main", "dateprepared").qq|
+            <input name=dateprepared size=11 value="$form->{dateprepared}" title="$form->{dateformat}">|.&js_calendar("main", "dateprepared").qq|
           </td>
           <td>$includeinreport{dateprepared}->{html}</td>
         </tr>
@@ -3518,7 +3518,9 @@ sub ex_customer {
     $form->hide_form(map { "${_}_$i" } qw(f a w t_f t_a t_w h_f h_a h_w));
   }
 
-  my $dateprepared = $form->format_date($form->{dateformat}, $form->datetonum(\%myconfig, $form->{dateprepared}));
+  my %exportconfig = %myconfig;
+  $exportconfig{dateformat} = $form->{dateformat};
+  my $dateprepared = $form->format_date($form->{dateformat}, $form->datetonum(\%exportconfig, $form->{dateprepared}));
 
   print qq|
       <tr class=listheading>
@@ -3626,7 +3628,9 @@ sub export_customers {
   my %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
   my $lf = $lf{$form->{linefeed}} || "\n";
 
-  $form->{dateprepared} = $form->format_date($form->{dateformat}, $form->datetonum(\%myconfig, $form->{dateprepared}));
+  my %exportconfig = %myconfig;
+  $exportconfig{dateformat} = $form->{dateformat};
+  $form->{dateprepared} = $form->format_date($form->{dateformat}, $form->datetonum(\%exportconfig, $form->{dateprepared}));
 
   $myconfig{numberformat} = "1000$form->{decimalpoint}" . "0" x $form->{precision};
 

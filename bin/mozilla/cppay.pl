@@ -601,9 +601,9 @@ $hidden|;
     my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
     $rows .= qq|
         <tr class=listsubtotal>
-          <td colspan=$total_cols nowrap>$total_for_label $employee</td>
-          <td align=right>$amount</td>
-          <td colspan=$foot_cols>&nbsp;</td>
+          <th class=listtotal colspan=$total_cols nowrap>$total_for_label $employee</th>
+          <th class=listtotal align=right>$amount</th>
+          <th class=listtotal colspan=$foot_cols>&nbsp;</th>
         </tr>|;
   }
 
@@ -619,9 +619,9 @@ $head
         </tr>
 $rows
         <tr class=listtotal>
-          <td colspan=$total_cols align=right>$total_label</td>
-          <td align=right>$form->{total_due}</td>
-          <td colspan=$foot_cols>&nbsp;</td>
+          <th class=listtotal colspan=$total_cols align=right>$total_label</th>
+          <th class=listtotal align=right>$form->{total_due}</th>
+          <th class=listtotal colspan=$foot_cols>&nbsp;</th>
         </tr>
       </table>
     </td>

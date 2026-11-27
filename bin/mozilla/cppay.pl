@@ -9,6 +9,22 @@ sub fmt_amount {
   return $form->format_amount(\%myconfig, $value, ($form->{precision} || 2));
 }
 
+sub text_val {
+  my ($value) = @_;
+  $value = '' unless defined $value;
+
+  if (($form->{format} || '') eq 'pdf') {
+    $value =~ s/\\/\\\\/g;
+    $value =~ s/([&%\$\#_{}])/\\$1/g;
+  } else {
+    $value =~ s/&/&amp;/g;
+    $value =~ s/</&lt;/g;
+    $value =~ s/>/&gt;/g;
+  }
+
+  $value;
+}
+
 sub setup {
 
   my $dbh = $form->dbconnect(\%myconfig);
@@ -657,8 +673,10 @@ sub payment_footer {
     'Update'       => { ndx => 1, key => 'U', value => $locale->text('Update') },
     'Select all'   => { ndx => 2, key => 'A', value => $locale->text('Select all') },
     'Deselect all' => { ndx => 3, key => 'A', value => $locale->text('Deselect all') },
-    'Post'         => { ndx => 4, key => 'O', value => $locale->text('Post') },
-    'Back'         => { ndx => 5, key => 'B', value => $locale->text('Back') },
+    'Preview'      => { ndx => 4, key => 'V', value => $locale->text('Preview') },
+    'Print'        => { ndx => 5, key => 'P', value => $locale->text('Print') },
+    'Post'         => { ndx => 6, key => 'O', value => $locale->text('Post') },
+    'Back'         => { ndx => 7, key => 'B', value => $locale->text('Back') },
   );
 
   if ($form->{allbox}) {
@@ -693,6 +711,99 @@ sub payment_footer {
     require "$form->{path}/menu.pl";
     &menubar;
   }
+}
+
+sub preview {
+  $form->{format} = 'html';
+  $form->{media} = 'screen';
+  &commission_payment_print;
+}
+
+sub print {
+  $form->{format} = 'html';
+  $form->{media} = 'printer';
+  &commission_payment_print;
+}
+
+sub commission_payment_print {
+
+  $form->{title} = $locale->text('Payment Commission');
+  $form->{language_code} = '' unless defined $form->{language_code};
+
+  for my $key (qw(cppay_row cppay_employee cppay_employeenumber
+                  cppay_invnumber cppay_duedate cppay_amount cppay_due cppay_paid)) {
+    $form->{$key} = [];
+  }
+
+  my ($total_amount, $total_due, $total_paid) = (0, 0, 0);
+  my $d = 0;
+
+  for my $i (1 .. ($form->{rowcount} || 0)) {
+    next unless $form->{"checked_$i"};
+
+    my $amount = $form->parse_amount(\%myconfig, $form->{"amount_$i"} || 0);
+    my $due = $form->parse_amount(\%myconfig, $form->{"due_$i"} || 0);
+    my $paid = $form->parse_amount(\%myconfig, $form->{"paid_$i"} || 0);
+
+    $total_amount += $amount;
+    $total_due += $due;
+    $total_paid += $paid;
+
+    $form->{cppay_row}[$d] = 1;
+    $form->{cppay_employee}[$d] = text_val($form->{"employee_$i"});
+    $form->{cppay_employeenumber}[$d] = text_val($form->{"employeenumber_$i"});
+    $form->{cppay_invnumber}[$d] = text_val($form->{"invnumber_$i"});
+    $form->{cppay_duedate}[$d] = text_val($form->{"duedate_$i"});
+    $form->{cppay_amount}[$d] = fmt_amount($amount);
+    $form->{cppay_due}[$d] = fmt_amount($due);
+    $form->{cppay_paid}[$d] = fmt_amount($paid);
+    $d++;
+  }
+
+  $form->error($locale->text('Nothing to print!')) unless $d;
+
+  $form->{cppay_total_amount} = fmt_amount($total_amount);
+  $form->{cppay_total_due} = fmt_amount($total_due);
+  $form->{cppay_total_paid} = fmt_amount($total_paid);
+
+  my @caption = (
+    $locale->text('Date').': '.text_val($form->{datepaid}),
+    $locale->text('Payment').': '.text_val($form->{payment_accno}),
+    $locale->text('Currency').': '.text_val($form->{currency}),
+  );
+  push @caption, $locale->text('Source').': '.text_val($form->{source})
+    if $form->{source};
+  push @caption, $locale->text('Memo').': '.text_val($form->{memo})
+    if $form->{memo};
+  $form->{cppay_caption} = join ' | ', @caption;
+
+  my $dbh = $form->dbconnect(\%myconfig);
+  my %defaults = $form->get_defaults($dbh,
+    [qw(company address tel fax companyemail companywebsite)]);
+  my %printers = $form->get_defaults($dbh, ['printer_%']);
+  $dbh->disconnect;
+
+  for (keys %defaults) { $form->{$_} = $defaults{$_} }
+  for (keys %printers) {
+    my ($label) = /^printer_(.*)$/;
+    $form->{"${label}_printer"} = $printers{$_};
+  }
+
+  $form->{templates} = "$templates/$myconfig{templates}";
+  $form->{IN} = 'commission_payment.html';
+  $form->{copies} = 1;
+  $form->{bodyattr} = '';
+
+  if ($form->{media} eq 'printer') {
+    if ($form->{Printer_printer}) {
+      $form->{OUT} = "| $form->{Printer_printer}";
+    } else {
+      $form->{bodyattr} = ' onload="window.print()"';
+    }
+  }
+
+  $form->format_string(qw(company address tel fax companyemail companywebsite));
+  $form->parse_template(\%myconfig, $userspath, $dvipdf, $xelatex);
 }
 
 sub select_all {

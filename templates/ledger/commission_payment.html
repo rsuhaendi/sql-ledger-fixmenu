@@ -1,0 +1,84 @@
+<body bgcolor=ffffff<%bodyattr%>>
+
+<table width=100%>
+
+  <%include letterhead.html%>
+
+  <tr>
+    <td width=10>&nbsp;</td>
+
+    <th colspan=7>
+      <h4>P A Y M E N T - C O M M I S S I O N</h4>
+    </th>
+  </tr>
+
+  <tr>
+    <td>&nbsp;</td>
+
+    <td colspan=7 align=right><%cppay_caption%></td>
+  </tr>
+
+</table>
+
+<table width=100% border=0>
+  <tr>
+    <th align=left>Salesperson</th>
+    <th align=left>Salesperson Number</th>
+    <th align=left>Invoice</th>
+    <th align=left>Due Date</th>
+    <th align=right>Amount</th>
+    <th align=right>Due</th>
+    <th align=right>Paid</th>
+  </tr>
+
+  <tr>
+    <td colspan=7><hr noshade size=1></td>
+  </tr>
+
+<%foreach cppay_row%>
+  <tr>
+    <td><%cppay_employee%>&nbsp;</td>
+    <td><%cppay_employeenumber%>&nbsp;</td>
+    <td><%cppay_invnumber%>&nbsp;</td>
+    <td><%cppay_duedate%>&nbsp;</td>
+    <td align=right><%cppay_amount%></td>
+    <td align=right><%cppay_due%></td>
+    <td align=right><%cppay_paid%></td>
+  </tr>
+<%end cppay_row%>
+
+  <tr>
+    <th colspan=4 align=right>Total</th>
+    <th align=right><%cppay_total_amount%></th>
+    <th align=right><%cppay_total_due%></th>
+    <th align=right><%cppay_total_paid%></th>
+  </tr>
+
+  <tr>
+    <td colspan=4>&nbsp;</td>
+    <td><hr noshade size=2></td>
+    <td><hr noshade size=2></td>
+    <td><hr noshade size=2></td>
+  </tr>
+
+</table>
+
+<br><br>
+
+<table width=100%>
+  <tr>
+    <td width=50% align=center>
+      <br>
+      _______________________________<br>
+      Penerima
+    </td>
+    <td width=50% align=center>
+      <br>
+      _______________________________<br>
+      Approved
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

@@ -14,16 +14,6 @@
 
 \vspace{0.3cm}
 
-<%foreach cm_group_name%>
-\noindent\textbf{Salesperson: <%cm_group_name%>}\\
-Address: <%cm_group_address%>\\
-\textbf{<%cm_group_customercount%> Customers}\\
-<%cm_group_paidcount%> Invoice Paid\\
-<%cm_group_unpaidcount%> Invoice Unpaid\par
-<%end cm_group_name%>
-
-\vspace{0.2cm}
-
 \noindent\begin{longtable}{|p{2.0cm}|p{1.6cm}|p{2.2cm}|p{1.7cm}|p{1.7cm}|p{1.4cm}|r|r|r|}
 \hline
 \textbf{Customer} & \textbf{Invoice} & \textbf{Period} & \textbf{Trans. Date} & \textbf{Paid Date} & \textbf{Status Paid} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
@@ -31,6 +21,15 @@ Address: <%cm_group_address%>\\
 \endhead
 
 <%foreach cm_detail_customer%>
+<%if cm_detail_header%>
+\hline
+\multicolumn{9}{|l|}{\textbf{Salesperson: <%cm_detail_name%>}} \\
+\multicolumn{9}{|l|}{Address: <%cm_detail_address%>} \\
+\multicolumn{9}{|l|}{<%cm_detail_customercount%> Customers \quad <%cm_detail_paidcount%> Invoice Paid \quad <%cm_detail_unpaidcount%> Invoice Unpaid} \\
+\hline
+\textbf{Customer} & \textbf{Invoice} & \textbf{Period} & \textbf{Trans. Date} & \textbf{Paid Date} & \textbf{Status Paid} & \textbf{Gross} & \textbf{Deduction} & \textbf{Net} \\
+\hline
+<%end cm_detail_header%>
 <%if cm_detail_row%>
 <%cm_detail_customer%> & <%cm_detail_invoice%> & <%cm_detail_period%> & <%cm_detail_transdate%> & <%cm_detail_paiddate%> & <%cm_detail_status%> & <%cm_detail_gross%> & <%cm_detail_deduction%> & <%cm_detail_net%> \\
 <%end cm_detail_row%>

@@ -2,6 +2,7 @@
 -- Adds per-salesperson fixed commission, configurable deduction and GL accounts.
 
 ALTER TABLE employee ADD COLUMN commission_amount numeric(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE employee ADD COLUMN commission_deduction numeric(5,2) NOT NULL DEFAULT 10;
 
 ALTER TABLE ar ADD COLUMN commission_amount numeric(14,2) NOT NULL DEFAULT 0;
 ALTER TABLE ar ADD COLUMN commission_deduction numeric(5,2) NOT NULL DEFAULT 10;

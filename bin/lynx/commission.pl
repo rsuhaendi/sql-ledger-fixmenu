@@ -40,7 +40,8 @@ sub prepare_data {
                   cm_detail_transdate cm_detail_paiddate cm_detail_status
                   cm_detail_gross cm_detail_deduction cm_detail_net
                   cm_detail_subtotal cm_detail_row cm_detail_grand
-                  cm_detail_name)) {
+                  cm_detail_header cm_detail_name cm_detail_address
+                  cm_detail_customercount cm_detail_paidcount cm_detail_unpaidcount)) {
     $form->{$key} = [];
   }
 
@@ -120,12 +121,37 @@ sub prepare_data {
   my %sub;
   my $d = 0;
 
+  my $add_header = sub {
+    my ($name) = @_;
+    my $group = $groups{$name} || {};
+    $form->{cm_detail_subtotal}[$d] = 0;
+    $form->{cm_detail_row}[$d] = 0;
+    $form->{cm_detail_grand}[$d] = 0;
+    $form->{cm_detail_header}[$d] = 1;
+    $form->{cm_detail_customer}[$d] = '';
+    $form->{cm_detail_status}[$d] = '';
+    $form->{cm_detail_name}[$d] = text_val($name);
+    $form->{cm_detail_address}[$d] = text_val($group->{address} || '-');
+    $form->{cm_detail_customercount}[$d] = scalar keys %{ $group->{customers} || {} };
+    $form->{cm_detail_paidcount}[$d] = $group->{paid} || 0;
+    $form->{cm_detail_unpaidcount}[$d] = $group->{unpaid} || 0;
+    $form->{cm_detail_invoice}[$d] = '';
+    $form->{cm_detail_period}[$d] = '';
+    $form->{cm_detail_transdate}[$d] = '';
+    $form->{cm_detail_paiddate}[$d] = '';
+    $form->{cm_detail_gross}[$d] = '';
+    $form->{cm_detail_deduction}[$d] = '';
+    $form->{cm_detail_net}[$d] = '';
+    $d++;
+  };
+
   my $flush_subtotal = sub {
     return unless $sub{rows};
 
     $form->{cm_detail_subtotal}[$d] = 1;
     $form->{cm_detail_row}[$d] = 0;
     $form->{cm_detail_grand}[$d] = 0;
+    $form->{cm_detail_header}[$d] = 0;
     $form->{cm_detail_customer}[$d] = '';
     $form->{cm_detail_status}[$d] = '';
     $form->{cm_detail_name}[$d] = text_val($current);
@@ -146,6 +172,7 @@ sub prepare_data {
     if ($ref->{employee} ne $current) {
       &$flush_subtotal;
       $current = $ref->{employee};
+      &$add_header($current);
     }
 
     $sub{rows}++;
@@ -162,6 +189,7 @@ sub prepare_data {
     $form->{cm_detail_subtotal}[$d] = 0;
     $form->{cm_detail_row}[$d] = 1;
     $form->{cm_detail_grand}[$d] = 0;
+    $form->{cm_detail_header}[$d] = 0;
     $form->{cm_detail_customer}[$d] = text_val($ref->{customer});
     $form->{cm_detail_invoice}[$d] = text_val($ref->{invnumber});
     $form->{cm_detail_period}[$d] = text_val($ref->{period});
@@ -179,6 +207,7 @@ sub prepare_data {
   $form->{cm_detail_subtotal}[$d] = 0;
   $form->{cm_detail_row}[$d] = 0;
   $form->{cm_detail_grand}[$d] = 1;
+  $form->{cm_detail_header}[$d] = 0;
   $form->{cm_detail_customer}[$d] = '';
   $form->{cm_detail_status}[$d] = '';
   $form->{cm_detail_invoice}[$d] = $all_invoices;
@@ -196,7 +225,6 @@ sub report {
   $form->{format} ||= $myconfig{outputformat} || 'html';
 
   CM->employees(\%myconfig, $form);
-  $form->{commission_deduction} = CM->setting(\%myconfig, $form);
 
   $form->{selectemployee} = "\n";
   for (@{ $form->{CM_employees} }) {
@@ -232,10 +260,6 @@ sub report {
           <th align=right nowrap>|.$locale->text('From').qq|</th>
           <td colspan=3 nowrap><input name=fromdate size=11 class=date title="$myconfig{dateformat}" value="$form->{fromdate}">|.&js_calendar("main", "fromdate").qq| <b>|.$locale->text('To').qq|</b> <input name=todate size=11 class=date title="$myconfig{dateformat}" value="$form->{todate}">|.&js_calendar("main", "todate").qq|</td>
         </tr>
-        <tr>
-          <th align=right nowrap>|.$locale->text('Deduction').qq| (%)</th>
-          <td><input name=commission_deduction size=5 value="$form->{commission_deduction}"></td>
-        </tr>
       </table>
     </td>
   </tr>
@@ -245,7 +269,7 @@ sub report {
 </table>
 
 <br>
-<input type=submit class=submit name=action value="|.$locale->text('Generate').qq|">
+<input type=submit class=submit name=action value="|.$locale->text('Continue').qq|">
 |;
 
   $form->hide_form(qw(nextsub path login));
@@ -271,8 +295,6 @@ sub generate {
 
   $form->{title} = $locale->text('Sales Commission');
   $form->{format} = 'html' unless $form->{format} =~ /^(html|pdf)$/;
-
-  $form->{commission_deduction} = CM->save_setting(\%myconfig, $form);
 
   my $posted = CM->post_pending(\%myconfig, $form);
   &prepare_data;
@@ -323,7 +345,7 @@ sub generate {
 <hr size=3 noshade>
 |;
 
-  $form->hide_form(qw(nextsub path login title fromdate todate commission_deduction employee_id));
+  $form->hide_form(qw(nextsub path login title fromdate todate employee_id));
 
   my %button = (
     'Preview' => { ndx => 1, key => 'V', value => $locale->text('Preview') },
@@ -366,30 +388,6 @@ sub render_report {
 
   print qq|<p>$form->{cm_caption}</p>| if $form->{cm_caption};
 
-  for my $i (0 .. $#{ $form->{cm_group_name} }) {
-    print qq|
-<table>
-  <tr>
-    <th align=left nowrap>|.$locale->text('Salesperson').qq|:</th>
-    <td><b>$form->{cm_group_name}[$i]</b></td>
-  </tr>
-  <tr>
-    <td align=left nowrap>|.$locale->text('Address').qq|:</td>
-    <td>$form->{cm_group_address}[$i]</td>
-  </tr>
-  <tr>
-    <td colspan=2>$form->{cm_group_customercount}[$i] |.$locale->text('Customers').qq|</td>
-  </tr>
-  <tr>
-    <td colspan=2>$form->{cm_group_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>
-  </tr>
-  <tr>
-    <td colspan=2>$form->{cm_group_unpaidcount}[$i] |.$locale->text('Invoice Unpaid').qq|</td>
-  </tr>
-</table>
-|;
-  }
-
   print qq|
 <table width=100%>
   <tr class=listheading>
@@ -410,7 +408,44 @@ sub render_report {
               : $form->{cm_detail_subtotal}[$i] ? 'listsubtotal'
               : 'listrow'.($i % 2);
 
-    if ($form->{cm_detail_subtotal}[$i] || $form->{cm_detail_grand}[$i]) {
+    if ($form->{cm_detail_header}[$i]) {
+      print qq|
+  <tr>
+    <td colspan=9>
+      <table width=100%>
+        <tr>
+          <th align=left nowrap>|.$locale->text('Salesperson').qq|:</th>
+          <td><b>$form->{cm_detail_name}[$i]</b></td>
+        </tr>
+        <tr>
+          <td align=left nowrap>|.$locale->text('Address').qq|:</td>
+          <td>$form->{cm_detail_address}[$i]</td>
+        </tr>
+        <tr>
+          <td colspan=2>$form->{cm_detail_customercount}[$i] |.$locale->text('Customers').qq|</td>
+        </tr>
+        <tr>
+          <td colspan=2>$form->{cm_detail_paidcount}[$i] |.$locale->text('Invoice Paid').qq|</td>
+        </tr>
+        <tr>
+          <td colspan=2>$form->{cm_detail_unpaidcount}[$i] |.$locale->text('Invoice Unpaid').qq|</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr class=listheading>
+    <th>|.$locale->text('Customer').qq|</th>
+    <th>|.$locale->text('Invoice').qq|</th>
+    <th>|.$locale->text('Period').qq|</th>
+    <th>|.$locale->text('Transaction Date').qq|</th>
+    <th>|.$locale->text('Paid Date').qq|</th>
+    <th>|.$locale->text('Status Paid').qq|</th>
+    <th align=right>|.$locale->text('Gross').qq|</th>
+    <th align=right>|.$locale->text('Deduction').qq|</th>
+    <th align=right>|.$locale->text('Net').qq|</th>
+  </tr>
+|;
+    } elsif ($form->{cm_detail_subtotal}[$i] || $form->{cm_detail_grand}[$i]) {
       my $label = $form->{cm_detail_grand}[$i]
         ? $locale->text('Total') : $locale->text('Subtotal');
 

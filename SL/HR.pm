@@ -382,16 +382,18 @@ sub save_employee {
   my $sales;
   my $acsrole_id;
   my $rn;
+  my $current_deduction;
 
   for (qw(paymentmethod acsrole)) { (undef, $form->{"${_}_id"}) = split /--/, $form->{$_} }
   
   if ($form->{id} *= 1) {
-    $query = qq|SELECT e.login, e.sales, e.acsrole_id, a.rn
+    $query = qq|SELECT e.login, e.sales, e.acsrole_id, a.rn,
+                       e.commission_deduction
                 FROM employee e
                 LEFT JOIN acsrole a ON (e.acsrole_id = a.id)
                 WHERE e.id = $form->{id}|;
 
-    ($employeelogin, $sales, $acsrole_id, $rn) = $dbh->selectrow_array($query);
+    ($employeelogin, $sales, $acsrole_id, $rn, $current_deduction) = $dbh->selectrow_array($query);
 
     my $login = $form->{login};
     $login =~ s/@.*//;
@@ -464,6 +466,14 @@ sub save_employee {
   $form->{acsrole_id} ||= 'NULL';
   $form->{sales} *= 1;
   $form->{commission_amount} = $form->parse_amount($myconfig, $form->{commission_amount});
+
+  if (!defined $form->{commission_deduction} || $form->{commission_deduction} eq '') {
+    $form->{commission_deduction} = defined $current_deduction ? $current_deduction : 10;
+  } else {
+    $form->{commission_deduction} = $form->parse_amount($myconfig, $form->{commission_deduction});
+    $form->{commission_deduction} = 10
+      unless $form->{commission_deduction} =~ /^\d+(\.\d+)?$/ && $form->{commission_deduction} >= 0 && $form->{commission_deduction} <= 100;
+  }
   
   $employeelogin = ($form->{employeelogin}) ? $dbh->quote($form->{employeelogin}) : 'NULL';
 	      
@@ -480,6 +490,7 @@ sub save_employee {
 	      notes = |.$dbh->quote($form->{notes}).qq|,
 	      sales = '$form->{sales}',
 	      commission_amount = $form->{commission_amount},
+	      commission_deduction = $form->{commission_deduction},
 	      login = $employeelogin,
 	      email = |.$dbh->quote($form->{email}).qq|,
 	      ssn = '$form->{ssn}',
@@ -492,6 +503,9 @@ sub save_employee {
 	      acs = '$form->{acs}'
 	      WHERE id = $form->{id}|;
   $dbh->do($query) || $form->dberror($query);
+
+  require "SL/CM.pm";
+  CM->recalculate_deduction($dbh, $form->{id}, $form->{commission_deduction});
 
   # add address
   my $id;

@@ -462,6 +462,9 @@ sub prepare_employee {
   HR->get_employee(\%myconfig, \%$form);
 
   $form->{commission_amount} = $form->format_amount(\%myconfig, $form->{commission_amount}, ($form->{precision} || 2));
+  $form->{commission_deduction} = 10
+    unless defined $form->{commission_deduction} && $form->{commission_deduction} ne '';
+  $form->{commission_deduction} = $form->format_amount(\%myconfig, $form->{commission_deduction}, 2);
 
   for (keys %$form) { $form->{$_} = $form->quote($form->{$_}) }
   
@@ -608,6 +611,10 @@ sub employee_header {
 	      <tr>
 		<th align=right>|.$locale->text('Commission Amount').qq|</th>
 		<td><input name=commission_amount size=20 value="|.$form->quote($form->{commission_amount}).qq|"></td>
+	      </tr>
+	      <tr>
+		<th align=right>|.$locale->text('Commission Deduction').qq| (%)</th>
+		<td><input name=commission_deduction size=20 value="|.$form->quote($form->{commission_deduction}).qq|"></td>
 	      </tr>
 |;
   } else {

@@ -4,6 +4,44 @@
 
 package CM;
 
+sub recalculate_deduction {
+  my ($self, $dbh, $employee_id, $deduction) = @_;
+
+  return unless $dbh && $employee_id && $employee_id =~ /^\d+$/;
+  $deduction = 10
+    unless defined $deduction && $deduction =~ /^\d+(\.\d+)?$/ && $deduction >= 0 && $deduction <= 100;
+
+  my $sth = $dbh->prepare(qq|
+    SELECT p.id, p.ar_id, p.gross
+    FROM commission_payable p
+    WHERE p.employee_id = $employee_id
+      AND p.paid < 0.005
+      AND p.accrual_posted = false|) || return 0;
+  $sth->execute || return 0;
+
+  my @rows;
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    push @rows, $ref;
+  }
+  $sth->finish;
+
+  my $rate = sprintf("%.2f", $deduction);
+  for my $ref (@rows) {
+    my $gross = $ref->{gross} * 1;
+    my $net = sprintf("%.2f", $gross * (1 - $rate / 100));
+    my $cut = sprintf("%.2f", $gross - $net);
+
+    $dbh->do(qq|UPDATE commission_payable
+                   SET deduction = $cut, net = $net
+                 WHERE id = $ref->{id}|);
+    $dbh->do(qq|UPDATE ar
+                   SET commission_deduction = $rate, commission_net = $net
+                 WHERE id = $ref->{ar_id}|);
+  }
+
+  scalar @rows;
+}
+
 sub setting_db {
   my ($self, $dbh) = @_;
 
@@ -91,7 +129,7 @@ sub post_invoice {
   my $sth = $dbh->prepare(qq|
     SELECT a.id, a.invnumber, a.employee_id, a.amount, a.paid,
            a.datepaid, a.transdate, a.commission_posted,
-           e.commission_amount
+           e.commission_amount, e.commission_deduction
     FROM ar a
     LEFT JOIN employee e ON (e.id = a.employee_id)
     WHERE a.id = $id
@@ -108,7 +146,8 @@ sub post_invoice {
   my $gross = $ref->{commission_amount} * 1;
   return 0 unless $gross > 0;
 
-  my $deduction = $self->setting_db($dbh);
+  my $deduction = $ref->{commission_deduction};
+  $deduction = 10 unless defined $deduction && $deduction =~ /^\d+(\.\d+)?$/ && $deduction >= 0 && $deduction <= 100;
   my $net = sprintf("%.2f", $gross * (1 - $deduction / 100));
   my $cut = sprintf("%.2f", $gross - $net);
   my $transdate = $ref->{datepaid} || $ref->{transdate};

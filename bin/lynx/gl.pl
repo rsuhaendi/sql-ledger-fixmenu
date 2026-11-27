@@ -1286,8 +1286,8 @@ sub form_header {
 	<tr class=listheading>
 	  <th class=listheading>|.$locale->text('Account').qq|</th>
 	  $fx_transaction
-	  <th class=listheading>|.$locale->text('Debit').qq| (Masuk/+)</th>
-	  <th class=listheading>|.$locale->text('Credit').qq| (Keluar/-)</th>
+	  <th class=listheading>|.$locale->text('Debit').qq|</th>
+	  <th class=listheading>|.$locale->text('Credit').qq|</th>
 	  <th class=listheading>|.$locale->text('Source').qq|</th>
 	  <th class=listheading>|.$locale->text('Memo').qq|</th>
 	  $project

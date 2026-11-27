@@ -112,8 +112,7 @@ sub post_invoice {
   my $net = sprintf("%.2f", $gross * (1 - $deduction / 100));
   my $cut = sprintf("%.2f", $gross - $net);
   my $transdate = $ref->{datepaid} || $ref->{transdate};
-  my $source = $dbh->quote($ref->{invnumber} || 'Commission');
-  my $memo = $dbh->quote("Sales commission - $ref->{invnumber}");
+  my $invnumber = $dbh->quote($ref->{invnumber} || 'Commission');
 
   $dbh->do(qq|UPDATE ar SET
                 commission_amount = $gross,
@@ -122,18 +121,10 @@ sub post_invoice {
                 commission_posted = true
               WHERE id = $id|);
 
-  for my $entry (
-      ['5480', -$gross],
-      ['2290',  $net],
-      ['4490',  $cut]) {
-    my ($accno, $amount) = @$entry;
-    next unless $amount;
-
-    $dbh->do(qq|INSERT INTO acc_trans
-                  (trans_id, chart_id, amount, transdate, source, memo, approved)
-                VALUES ($id, (SELECT id FROM chart WHERE accno = '$accno'),
-                        $amount, '$transdate', $source, $memo, 't')|);
-  }
+  $dbh->do(qq|INSERT INTO commission_payable
+                (ar_id, invnumber, employee_id, gross, deduction, net, transdate, accrual_posted)
+              SELECT $id, $invnumber, $ref->{employee_id}, $gross, $cut, $net, '$transdate', false
+              WHERE NOT EXISTS (SELECT 1 FROM commission_payable WHERE ar_id = $id)|);
 
   1;
 }
@@ -242,6 +233,191 @@ sub report {
   $sth->finish;
 
   $dbh->disconnect;
+}
+
+sub _employee_id {
+  my ($value) = @_;
+  my @employee = split /--/, ($value || '');
+  my $id = $employee[-1] || '';
+  $id *= 1;
+  return $id;
+}
+
+sub outstanding {
+  my ($self, $myconfig, $form) = @_;
+
+  $form->{CM_outstanding} = [];
+
+  my $dbh = $form->dbconnect($myconfig);
+
+  my $employee_id = _employee_id($form->{employee_id});
+  my $where = '';
+  $where .= " AND p.employee_id = $employee_id" if $employee_id;
+  $where .= " AND p.paid < p.net - 0.005" unless $form->{showpaid};
+
+  my $query = qq|
+    SELECT p.*, e.name AS employee, p.net - p.paid AS due
+    FROM commission_payable p
+    JOIN employee e ON (e.id = p.employee_id)
+    WHERE 1=1 $where
+    ORDER BY e.name, p.transdate, p.invnumber|;
+  my $sth = $dbh->prepare($query) || $form->dberror($query);
+  $sth->execute;
+
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    for (qw(transdate paid_date)) {
+      my $iso = $ref->{$_} || '';
+      $iso =~ s/\D//g;
+      $ref->{$_} = $iso =~ /^\d{8}$/
+        ? $form->format_date($myconfig->{dateformat}, $iso) : '';
+    }
+    push @{ $form->{CM_outstanding} }, $ref;
+  }
+  $sth->finish;
+  $dbh->disconnect;
+}
+
+sub pay {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect_noauto($myconfig);
+  $dbh->{RaiseError} = 1;
+  $dbh->{PrintError} = 0;
+
+  my $result = eval {
+    my $employee_id = _employee_id($form->{employee_id});
+    die $main::locale->text('Salesperson missing!') unless $employee_id;
+
+    my ($accno) = split /--/, ($form->{payment_accno} || '');
+    die $main::locale->text('Payment account missing!') unless $accno;
+
+    my ($chart_id) = $dbh->selectrow_array(qq|
+      SELECT id FROM chart WHERE accno = |.$dbh->quote($accno));
+    die $main::locale->text('Payment account missing!') unless $chart_id;
+
+    my $date = $form->{datepaid} || '';
+    $date = $form->datetonum($myconfig, $date);
+    my $date_sql = 'CURRENT_DATE';
+    if ($date =~ /^(\d{4})(\d{2})(\d{2})$/) {
+      $date_sql = qq|'$1-$2-$3'|;
+    }
+
+    my $source = $dbh->quote($form->{source} || 'Commission Payment');
+    my $memo = $dbh->quote($form->{memo} || 'Commission payment');
+
+    my @ids;
+    my %pay;
+    my $rows = 0;
+
+    for my $i (1 .. ($form->{rowcount} || 0)) {
+      next unless $form->{"ndx_$i"};
+      my $id = $form->{"id_$i"} || 0;
+      next unless $id =~ /^\d+$/;
+
+      my $amount = $form->parse_amount($myconfig, $form->{"paid_$i"} || 0);
+      next unless $amount > 0;
+
+      $pay{$id} = $amount;
+      push @ids, $id;
+      $rows++;
+    }
+
+    die $main::locale->text('Nothing to pay!') unless $rows;
+
+    my $list = join ',', @ids;
+    my $sth = $dbh->prepare(qq|
+      SELECT * FROM commission_payable WHERE id IN ($list) FOR UPDATE|);
+    $sth->execute;
+
+    my %row;
+    while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+      $row{$ref->{id}} = $ref;
+    }
+    $sth->finish;
+
+    my ($total_paid, $total_gross, $total_net, $total_cut, $accruals) = (0, 0, 0, 0, 0);
+    for my $id (@ids) {
+      my $ref = $row{$id};
+      die $main::locale->text('Commission not found!') unless $ref;
+
+      my $due = $ref->{net} - $ref->{paid};
+      die $main::locale->text('Payment exceeds outstanding commission!')
+        if $pay{$id} > $due + 0.005;
+
+      $total_paid += $pay{$id};
+      next if $ref->{accrual_posted};
+
+      $total_gross += $ref->{gross};
+      $total_net += $ref->{net};
+      $total_cut += $ref->{deduction};
+      $accruals++;
+    }
+
+    my $glid = $dbh->selectrow_array(qq|
+      INSERT INTO gl (reference, description, transdate, employee_id, notes, approved)
+      VALUES ('Commission Payment', $source, $date_sql, $employee_id, $memo, 't')
+      RETURNING id|);
+
+    if ($accruals) {
+      for my $entry (
+          ['5480', -$total_gross],
+          ['2290',  $total_net],
+          ['4490',  $total_cut]) {
+        my ($entry_accno, $amount) = @$entry;
+        next unless $amount;
+
+        $dbh->do(qq|
+          INSERT INTO acc_trans
+            (trans_id, chart_id, amount, transdate, source, memo, approved)
+          VALUES ($glid, (SELECT id FROM chart WHERE accno = '$entry_accno'),
+                  $amount, $date_sql, $source,
+                  |.$dbh->quote('Commission accrual - '.$accruals.' invoice(s)').qq|, 't')|);
+      }
+    }
+
+    if ($total_paid) {
+      $dbh->do(qq|
+        INSERT INTO acc_trans
+          (trans_id, chart_id, amount, transdate, source, memo, approved)
+        VALUES ($glid, (SELECT id FROM chart WHERE accno = '2290'),
+                -$total_paid, $date_sql, $source, $memo, 't')|);
+
+      my ($paymentid) = $dbh->selectrow_array(qq|SELECT nextval('id')|);
+      $dbh->do(qq|
+        INSERT INTO acc_trans
+          (trans_id, chart_id, amount, transdate, source, memo, approved, id)
+        VALUES ($glid, $chart_id, $total_paid, $date_sql, $source, $memo, 't', $paymentid)|);
+      $dbh->do(qq|
+        INSERT INTO payment (id, trans_id, exchangerate)
+        VALUES ($paymentid, $glid, 1)|);
+
+      for my $id (@ids) {
+        $dbh->do(qq|
+          UPDATE commission_payable SET
+            paid = paid + $pay{$id},
+            paid_date = $date_sql,
+            payment_accno = |.$dbh->quote($accno).qq|,
+            payment_source = $source,
+            payment_id = $paymentid,
+            gl_id = $glid,
+            accrual_posted = true
+          WHERE id = $id|);
+      }
+    }
+
+    $dbh->commit;
+    return (1, $glid, $total_paid);
+  };
+
+  if ($@) {
+    $dbh->rollback;
+    my $error = $@ || $dbh->errstr || $main::locale->text('Payment failed!');
+    $error =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*$//;
+    return (0, $error);
+  }
+
+  $dbh->disconnect;
+  return (1, undef, 0);
 }
 
 1;

@@ -288,7 +288,7 @@ sub generate {
   &render_report(0);
 
   print qq|
-<p>|.$locale->text('Posted').qq|: $posted</p>
+<p>|.$locale->text('Generated').qq|: $posted</p>
 
 <form method="post" name="main" action="$form->{script}">
 |;

@@ -386,9 +386,12 @@ sub pay {
       $accruals++;
     }
 
+    my $reference = $form->update_defaults($myconfig, 'glnumber', $dbh) || 'Commission Payment';
+    my $reference_q = $dbh->quote($reference);
+
     my $glid = $dbh->selectrow_array(qq|
       INSERT INTO gl (reference, description, transdate, employee_id, notes, approved)
-      VALUES ('Commission Payment', $source, $date_sql, $employee_id, $memo, 't')
+      VALUES ($reference_q, $source, $date_sql, $employee_id, $memo, 't')
       RETURNING id|);
 
     if ($accruals) {

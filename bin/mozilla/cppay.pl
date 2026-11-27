@@ -251,6 +251,7 @@ sub update {
     $form->{"due_$i"} = $due;
     $form->{"paid_before_$i"} = $paid_before;
     $form->{"paid_$i"} = $paid;
+    $form->{"total_$i"} = $paid;
     $form->{"checked_$i"} = $is_checked;
 
     if ($detail) {
@@ -552,6 +553,7 @@ sub list_invoices {
 
   my $rows = '';
   my $j = 0;
+  my %totals;
 
   for my $i (1 .. ($form->{rowcount} || 0)) {
     my $employee = $form->{"employee_$i"} || '';
@@ -592,6 +594,10 @@ sub list_invoices {
           <td align=center><input name="memo_$i" size=20 value="|.$form->quote($form->{"memo_$i"} || '').qq|"></td>
           <td align=center><input name="source_$i" size=10 value="|.$form->quote($form->{"source_$i"} || '').qq|"></td>|;
 
+    for my $key (qw(amount due paid total)) {
+      $totals{$key} += $form->parse_amount(\%myconfig, $form->{"${key}_$i"} || 0);
+    }
+
     $rows .= qq|
         <tr class=listrow$j>
           $detail_cell
@@ -600,18 +606,27 @@ sub list_invoices {
 $hidden|;
   }
 
+  # Totals are placed under their own columns, exactly like Cash -> Payment.
+  my %grand = map { $_ => '<th class=listtotal>&nbsp;</th>' } @column_index;
+  for my $key (qw(amount due paid total)) {
+    next unless exists $grand{$key};
+    my $value = $form->format_amount(\%myconfig, $totals{$key} || 0, ($form->{precision} || 2));
+    $grand{$key} = qq|<th class=listtotal align=right>$value</th>|;
+  }
+  my $grand_row = join "\n", map { $grand{$_} } @column_index;
+
   # Invoice-level subtotals only in the single-salesperson detail view;
   # in the list view each salesperson row is already a subtotal.
-  my $foot_cols = 3;
-  my $total_cols = $detail_view ? 6 : 5;
   for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
     my $employee = $subtotal->{employee} || '';
     my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
+    my %sub = map { $_ => '<th class=listtotal>&nbsp;</th>' } @column_index;
+    $sub{employee} = qq|<th class=listtotal nowrap>$total_for_label $employee</th>| if exists $sub{employee};
+    $sub{due} = qq|<th class=listtotal align=right>$amount</th>| if exists $sub{due};
+    my $sub_row = join "\n", map { $sub{$_} } @column_index;
     $rows .= qq|
         <tr class=listsubtotal>
-          <th class=listtotal colspan=$total_cols nowrap>$total_for_label $employee</th>
-          <th class=listtotal align=right>$amount</th>
-          <th class=listtotal colspan=$foot_cols>&nbsp;</th>
+$sub_row
         </tr>|;
   }
 
@@ -627,9 +642,7 @@ $head
         </tr>
 $rows
         <tr class=listtotal>
-          <th class=listtotal colspan=$total_cols align=right>$total_label</th>
-          <th class=listtotal align=right>$form->{total_due}</th>
-          <th class=listtotal colspan=$foot_cols>&nbsp;</th>
+$grand_row
         </tr>
       </table>
     </td>

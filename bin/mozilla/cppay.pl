@@ -494,9 +494,11 @@ HTML
 sub list_invoices {
 
   my $detail_view = (($form->{view} || '') eq 'detail');
+  # Same column order as Cash -> Payment / Payments: the selection
+  # checkbox sits after Due, immediately before Paid.
   my @column_index = $detail_view
-    ? qw(checked employee invnumber transdate duedate amount due paid discount total)
-    : qw(checked detail employee invnumber amount due paid total);
+    ? qw(employee invnumber transdate duedate amount due checked paid discount total)
+    : qw(detail employee invnumber amount due checked paid total);
   my $colspan = $#column_index + 1;
 
   my $invoice_label = $detail_view ? $locale->text('Invoices') : $locale->text('Salespersons');
@@ -546,6 +548,8 @@ sub list_invoices {
     my $detail_cell = $detail_view ? '' :
       qq|<td align=center><input name="detail_$i" type=checkbox class=checkbox value=1 onChange="javascript:document.main.submit()"></td>|;
 
+    my $checked_cell = qq|<td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>|;
+
     my $cells = $detail_view
       ? qq|
           <td nowrap>$employee</td>
@@ -554,6 +558,7 @@ sub list_invoices {
           <td nowrap>$form->{"duedate_$i"}</td>
           <td align=right>$form->{"amount_$i"}</td>
           <td align=right>$form->{"due_$i"}</td>
+          $checked_cell
           <td align=center><input name="paid_$i" class=inputright size=11 value="$form->{"paid_$i"}"></td>
           <td>&nbsp;</td>
           <td align=right>$form->{"paid_$i"}</td>|
@@ -562,12 +567,12 @@ sub list_invoices {
           <td>$form->{"invnumber_$i"}</td>
           <td align=right>$form->{"amount_$i"}</td>
           <td align=right>$form->{"due_$i"}</td>
+          $checked_cell
           <td align=center><input name="paid_$i" class=inputright size=11 value="$form->{"paid_$i"}"></td>
           <td align=right>$form->{"paid_$i"}</td>|;
 
     $rows .= qq|
         <tr class=listrow$j>
-          <td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>
           $detail_cell
           $cells
         </tr>

@@ -15,10 +15,11 @@ sub setup {
 
   CM->employees(\%myconfig, $form);
   my @employee = @{ $form->{CM_employees} || [] };
-  $form->{selectemployee} = join "\n", map { "$_->{name}--$_->{id}" } @employee;
+  $form->{selectemployee} = $locale->text('All')."--0\n"
+    . join "\n", map { "$_->{name}--$_->{id}" } @employee;
 
-  if (!$form->{employee_id} && @employee && ($form->{all_sales} || '') ne 'Y') {
-    $form->{employee_id} = "$employee[0]{name}--$employee[0]{id}";
+  if (!defined $form->{employee_id}) {
+    $form->{employee_id} = @employee ? "$employee[0]{name}--$employee[0]{id}" : '';
   }
 
   my ($employee_id) = split /--/, ($form->{employee_id} || '');
@@ -228,6 +229,26 @@ sub payment_header {
   my $department_select = $form->select_option($form->{selectdepartment}, $form->{department}, 1);
   my $currency_select = $form->select_option($form->{selectcurrency}, $form->{currency}, 1);
 
+  my $method_row = '';
+  if ($form->{selectpaymentmethod}) {
+    my $label = $locale->text('Payment Method');
+    $method_row = qq|
+              <tr>
+                <th align=right nowrap>$label</th>
+                <td colspan=3><select name=paymentmethod onChange="javascript:document.main.submit()">$method_select</select></td>
+              </tr>|;
+  }
+
+  my $department_row = '';
+  if ($form->{selectdepartment}) {
+    my $label = $locale->text('Department');
+    $department_row = qq|
+              <tr>
+                <th align=right nowrap>$label</th>
+                <td colspan=3><select name=department onChange="javascript:document.main.submit()">$department_select</select></td>
+              </tr>|;
+  }
+
   my $exchangerate = '';
   if ($form->{currency} ne $form->{defaultcurrency}) {
     my $label = $locale->text('Exchange Rate');
@@ -247,10 +268,8 @@ sub payment_header {
   my $memo = $locale->text('Memo');
   my $showpaid_label = $locale->text('Show Paid');
   my $payment = $locale->text('Payment');
-  my $paymentmethod = $locale->text('Payment Method');
   my $date_label = $locale->text('Date');
   my $currency_label = $locale->text('Currency');
-  my $department_label = $locale->text('Department');
   my $source_label = $locale->text('Source');
   my $amount_label = $locale->text('Amount');
 
@@ -289,7 +308,7 @@ HTML
             <table>
               <tr>
                 <th align=right nowrap>$salesperson</th>
-                <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
+                <td><select name=employee_id>$employee_select</select></td>
               </tr>
               <tr>
                 <td align=right><input name=all_sales type=checkbox class=checkbox value=Y $allsales onChange="javascript:document.main.submit()"></td>
@@ -324,14 +343,8 @@ HTML
                 <th align=right nowrap>$payment</th>
                 <td colspan=3><select name=payment_accno onChange="javascript:document.main.submit()">$account_select</select></td>
               </tr>
-              <tr>
-                <th align=right nowrap>$paymentmethod</th>
-                <td colspan=3><select name=paymentmethod onChange="javascript:document.main.submit()">$method_select</select></td>
-              </tr>
-              <tr>
-                <th align=right nowrap>$department_label</th>
-                <td colspan=3><select name=department onChange="javascript:document.main.submit()">$department_select</select></td>
-              </tr>
+              $method_row
+              $department_row
               <tr>
                 <th align=right nowrap>$date_label</th>
                 <td colspan=3><input name=datepaid value="$form->{datepaid}" title="$myconfig{dateformat}" size=11 class=date>$calendar</td>

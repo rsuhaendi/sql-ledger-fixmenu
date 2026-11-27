@@ -268,7 +268,8 @@ sub outstanding {
   }
 
   my $query = qq|
-    SELECT p.*, e.name AS employee, p.net - p.paid AS due
+    SELECT p.*, e.name AS employee, e.employeenumber,
+           p.net - p.paid AS due
     FROM commission_payable p
     JOIN employee e ON (e.id = p.employee_id)
     WHERE 1=1 $where
@@ -313,14 +314,12 @@ sub pay {
       $date_sql = qq|'$1-$2-$3'|;
     }
 
-    my $source = $dbh->quote($form->{source} || 'Commission Payment');
-    my $memo = $dbh->quote($form->{memo} || 'Commission payment');
-
     my $rate = $form->parse_amount($myconfig, $form->{exchangerate});
     $rate = 1 unless $rate && $rate > 0;
 
     my @ids;
     my %pay;
+    my %meta;
     my $rows = 0;
 
     for my $i (1 .. ($form->{rowcount} || 0)) {
@@ -332,11 +331,18 @@ sub pay {
       next unless $amount > 0;
 
       $pay{$id} = $form->round_amount($amount * $rate, 2);
+      $meta{$id} = {
+        source => $form->{"source_$i"} || $form->{source} || 'Commission Payment',
+        memo   => $form->{"memo_$i"} || $form->{memo} || 'Commission payment',
+      };
       push @ids, $id;
       $rows++;
     }
 
     die $main::locale->text('Nothing to pay!') unless $rows;
+
+    my $source = $dbh->quote($meta{$ids[0]}{source});
+    my $memo = $dbh->quote($meta{$ids[0]}{memo});
 
     if (!$employee_id) {
       ($employee_id) = $dbh->selectrow_array(qq|
@@ -421,7 +427,7 @@ sub pay {
             paid = paid + $pay{$id},
             paid_date = $date_sql,
             payment_accno = |.$dbh->quote($accno).qq|,
-            payment_source = $source,
+            payment_source = |.$dbh->quote($meta{$id}{source}).qq|,
             payment_id = $paymentid,
             gl_id = $glid,
             accrual_posted = true

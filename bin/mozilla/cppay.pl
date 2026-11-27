@@ -206,9 +206,10 @@ sub update {
       my $eid = $p->{employee_id};
       if (!exists $group{$eid}) {
         $group{$eid} = {
-          employee    => $p->{employee},
-          employee_id => $eid,
-          rows        => [],
+          employee       => $p->{employee},
+          employee_id    => $eid,
+          employeenumber => $p->{employeenumber},
+          rows           => [],
           amount      => 0,
           paid        => 0,
           due         => 0,
@@ -245,6 +246,7 @@ sub update {
     $form->{"id_$i"} = $id;
     $form->{"employee_$i"} = $p->{employee};
     $form->{"employee_id_$i"} = "$p->{employee}--$p->{employee_id}";
+    $form->{"employeenumber_$i"} = $p->{employeenumber} || '';
     $form->{"amount_$i"} = $amount;
     $form->{"due_$i"} = $due;
     $form->{"paid_before_$i"} = $paid_before;
@@ -264,6 +266,8 @@ sub update {
       $form->{"invnumber_$i"} = scalar @{ $rows }.' '.$locale->text('Invoices');
       $form->{"groupids_$i"} = join ',', map { $_->{id} } @$rows;
       $form->{"groupdues_$i"} = join ',', map { $_->{due} } @$rows;
+      $form->{"memo_$i"} ||= $form->{memo} || '';
+      $form->{"source_$i"} ||= $form->{source} || '';
     }
 
     $total_due += $base_due / $rate;
@@ -511,15 +515,18 @@ sub list_invoices {
   # checkbox sits after Due, immediately before Paid.
   my @column_index = $detail_view
     ? qw(employee invnumber transdate duedate amount due checked paid discount total)
-    : qw(detail employee invnumber amount due checked paid total);
+    : qw(detail employee employeenumber amount due checked paid memo source);
   my $colspan = $#column_index + 1;
 
-  my $invoice_label = $detail_view ? $locale->text('Invoices') : $locale->text('Salespersons');
+  my $invoice_label = $locale->text('Invoices');
   my %label = (
-    checked   => '',
-    detail    => $locale->text('Detail'),
-    employee  => $locale->text('Salesperson'),
-    invnumber => $detail_view ? $locale->text('Invoice') : $locale->text('Invoices'),
+    checked        => '',
+    detail         => $locale->text('Detail'),
+    employee       => $locale->text('Salesperson'),
+    employeenumber => $locale->text('Salesperson Number'),
+    invnumber      => $locale->text('Invoice'),
+    memo           => $locale->text('Memo'),
+    source         => $locale->text('Source'),
     transdate => $locale->text('Invoice Date'),
     duedate   => $locale->text('Due Date'),
     amount    => $locale->text('Amount'),
@@ -551,8 +558,8 @@ sub list_invoices {
     my $checked = $form->{"checked_$i"} ? 'checked' : '';
     my $save_header = $form->{header};
     $form->{header} = 0;
-    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id invnumber
-      transdate duedate gross deduction net amount due paid_before calcdiscount
+    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id employeenumber
+      invnumber transdate duedate gross deduction net amount due paid_before calcdiscount
       count groupids groupdues));
     $form->{header} = $save_header;
 
@@ -577,12 +584,13 @@ sub list_invoices {
           <td align=right>$form->{"paid_$i"}</td>|
       : qq|
           <td nowrap>$employee</td>
-          <td>$form->{"invnumber_$i"}</td>
+          <td>$form->{"employeenumber_$i"}</td>
           <td align=right>$form->{"amount_$i"}</td>
           <td align=right>$form->{"due_$i"}</td>
           $checked_cell
           <td align=center><input name="paid_$i" class=inputright size=11 value="$form->{"paid_$i"}"></td>
-          <td align=right>$form->{"paid_$i"}</td>|;
+          <td align=center><input name="memo_$i" size=20 value="|.$form->quote($form->{"memo_$i"} || '').qq|"></td>
+          <td align=center><input name="source_$i" size=10 value="|.$form->quote($form->{"source_$i"} || '').qq|"></td>|;
 
     $rows .= qq|
         <tr class=listrow$j>
@@ -594,7 +602,7 @@ $hidden|;
 
   # Invoice-level subtotals only in the single-salesperson detail view;
   # in the list view each salesperson row is already a subtotal.
-  my $foot_cols = $detail_view ? 3 : 2;
+  my $foot_cols = 3;
   my $total_cols = $detail_view ? 6 : 5;
   for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
     my $employee = $subtotal->{employee} || '';
@@ -703,8 +711,10 @@ sub post {
         my $amount = $remaining > $due ? $due : $remaining;
         next if $amount <= 0;
         push @expand, {
-          id   => $ids[$j],
-          paid => $form->format_amount(\%myconfig, $amount, ($form->{precision} || 2)),
+          id     => $ids[$j],
+          paid   => $form->format_amount(\%myconfig, $amount, ($form->{precision} || 2)),
+          memo   => $form->{"memo_$i"} || '',
+          source => $form->{"source_$i"} || '',
         };
         $remaining -= $amount;
       }
@@ -716,6 +726,8 @@ sub post {
       $form->{"id_$n"} = $row->{id};
       $form->{"paid_$n"} = $row->{paid};
       $form->{"checked_$n"} = 1;
+      $form->{"memo_$n"} = $row->{memo};
+      $form->{"source_$n"} = $row->{source};
     }
     $form->{rowcount} = $n;
   }

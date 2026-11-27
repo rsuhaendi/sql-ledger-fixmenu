@@ -602,6 +602,7 @@ sub ap_aging {
   $sth->execute;
 
   my @buckets = qw(c0 c15 c30 c45 c60 c75 c90);
+  my %bound = (c0 => 0, c15 => 15, c30 => 30, c45 => 45, c60 => 60, c75 => 75, c90 => 90);
   my @active = grep { $form->{$_} } @buckets;
   @active = @buckets unless @active;
 
@@ -624,15 +625,24 @@ sub ap_aging {
     next unless $dt && $to;
 
     my $days = _days_between($dt, $to);
-    my $bucket = 'c90';
-    if    ($days <= 0)  { $bucket = 'c0'; }
-    elsif ($days <= 15) { $bucket = 'c15'; }
-    elsif ($days <= 30) { $bucket = 'c30'; }
-    elsif ($days <= 45) { $bucket = 'c45'; }
-    elsif ($days <= 60) { $bucket = 'c60'; }
-    elsif ($days <= 75) { $bucket = 'c75'; }
-    else                { $bucket = 'c90'; }
-    next unless grep { $_ eq $bucket } @active;
+    $days = 0 if $days < 0;
+
+    # Collapse into selected buckets like stock SQL-Ledger aging.
+    my $bucket = $active[-1];
+    if ($#active == 0) {
+      $bucket = $active[0];
+    } elsif ($days <= $bound{$active[1]}) {
+      $bucket = $active[0];
+    } elsif ($days > $bound{$active[-1]}) {
+      $bucket = $active[-1];
+    } else {
+      for my $i (1 .. $#active - 1) {
+        if ($days > $bound{$active[$i]} && $days <= $bound{$active[$i + 1]}) {
+          $bucket = $active[$i];
+          last;
+        }
+      }
+    }
 
     my $ref = {
       vc_id         => $p->{employee_id},

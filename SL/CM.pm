@@ -256,6 +256,17 @@ sub outstanding {
   $where .= " AND p.employee_id = $employee_id" if $employee_id;
   $where .= " AND p.paid < p.net - 0.005" unless $form->{showpaid};
 
+  # Due Date filter, same workflow as Cash -> Payments/Receipts. Commission
+  # rows use transdate as their due date.
+  for my $field (qw(duedatefrom duedateto)) {
+    my $iso = $form->datetonum($myconfig, $form->{$field} || '');
+    next unless $iso =~ /^(\d{4})(\d{2})(\d{2})$/;
+    my $date = "$1-$2-$3";
+    $where .= $field eq 'duedatefrom'
+      ? " AND p.transdate >= '$date'"
+      : " AND p.transdate <= '$date'";
+  }
+
   my $query = qq|
     SELECT p.*, e.name AS employee, p.net - p.paid AS due
     FROM commission_payable p

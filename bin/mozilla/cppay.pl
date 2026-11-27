@@ -107,6 +107,7 @@ sub report {
   $form->{vc} = 'vendor';
 
   $form->{datepaid} ||= $form->current_date(\%myconfig);
+  $form->{oldduedateto} = $form->{datepaid} unless defined $form->{oldduedateto};
   $form->{view} = 'list' unless $form->{view};
   if ($form->{view} eq 'list') {
     $form->{employee_id} = '';
@@ -153,6 +154,8 @@ sub update {
   $reset = 1 if ($form->{oldcurrency} || '') ne ($form->{currency} || '');
   $reset = 1 if ($form->{oldexchangerate} || '') ne ($form->{exchangerate} || '');
   $reset = 1 if ($form->{olddatepaid} || '') ne ($form->{datepaid} || '');
+  $reset = 1 if (($form->{oldduedatefrom} || '') ne ($form->{duedatefrom} || ''));
+  $reset = 1 if (($form->{oldduedateto} || '') ne ($form->{duedateto} || ''));
   $reset = 1 if ($form->{oldall_sales} || '') ne ($form->{all_sales} || '');
 
   my %old;
@@ -179,13 +182,44 @@ sub update {
   my $total_paid = 0;
   my @subtotal;
 
-  for my $p (@{ $form->{CM_outstanding} || [] }) {
+  my $detail = (($form->{view} || '') eq 'detail');
+  my @sources;
+
+  if ($detail) {
+    @sources = @{ $form->{CM_outstanding} || [] };
+  } else {
+    # Cash -> Payments style: the list shows one row per salesperson.
+    # Ticking Detail opens the single-salesperson invoice form.
+    my %group;
+    for my $p (@{ $form->{CM_outstanding} || [] }) {
+      my $eid = $p->{employee_id};
+      if (!exists $group{$eid}) {
+        $group{$eid} = {
+          employee    => $p->{employee},
+          employee_id => $eid,
+          rows        => [],
+          amount      => 0,
+          paid        => 0,
+          due         => 0,
+        };
+        push @sources, $group{$eid};
+      }
+      my $g = $group{$eid};
+      push @{ $g->{rows} }, $p;
+      $g->{amount} += $p->{net} || 0;
+      $g->{paid}   += $p->{paid} || 0;
+      $g->{due}    += $p->{due} || 0;
+    }
+  }
+
+  for my $p (@sources) {
     $i++;
 
-    my $id = $p->{id};
-    my $base_amount = ($p->{net} || 0) * 1;
-    my $base_paid   = ($p->{paid} || 0) * 1;
-    my $base_due    = ($p->{due} || 0) * 1;
+    my $rows = $detail ? [] : $p->{rows};
+    my $id = $detail ? $p->{id} : $rows->[0]{id};
+    my $base_amount = $detail ? ($p->{net} || 0) * 1 : ($p->{amount} || 0) * 1;
+    my $base_paid   = $detail ? ($p->{paid} || 0) * 1 : ($p->{paid} || 0) * 1;
+    my $base_due    = $detail ? ($p->{due} || 0) * 1 : ($p->{due} || 0) * 1;
 
     my $amount = $form->format_amount(\%myconfig, $base_amount / $rate, ($form->{precision} || 2));
     my $due = $form->format_amount(\%myconfig, $base_due / $rate, ($form->{precision} || 2));
@@ -200,26 +234,36 @@ sub update {
     $form->{"id_$i"} = $id;
     $form->{"employee_$i"} = $p->{employee};
     $form->{"employee_id_$i"} = "$p->{employee}--$p->{employee_id}";
-    $form->{"invnumber_$i"} = $p->{invnumber};
-    $form->{"transdate_$i"} = $p->{transdate};
-    $form->{"duedate_$i"} = $p->{transdate};
-    $form->{"gross_$i"} = $p->{gross};
-    $form->{"deduction_$i"} = $p->{deduction};
-    $form->{"net_$i"} = $p->{net};
     $form->{"amount_$i"} = $amount;
     $form->{"due_$i"} = $due;
     $form->{"paid_before_$i"} = $paid_before;
     $form->{"paid_$i"} = $paid;
     $form->{"checked_$i"} = $is_checked;
-    $form->{"calcdiscount_$i"} = 0;
+
+    if ($detail) {
+      $form->{"invnumber_$i"} = $p->{invnumber};
+      $form->{"transdate_$i"} = $p->{transdate};
+      $form->{"duedate_$i"} = $p->{transdate};
+      $form->{"gross_$i"} = $p->{gross};
+      $form->{"deduction_$i"} = $p->{deduction};
+      $form->{"net_$i"} = $p->{net};
+      $form->{"calcdiscount_$i"} = 0;
+    } else {
+      $form->{"count_$i"} = scalar @{ $rows };
+      $form->{"invnumber_$i"} = scalar @{ $rows }.' '.$locale->text('Invoices');
+      $form->{"groupids_$i"} = join ',', map { $_->{id} } @$rows;
+      $form->{"groupdues_$i"} = join ',', map { $_->{due} } @$rows;
+    }
 
     $total_due += $base_due / $rate;
 
-    my $employee = $p->{employee} || '';
-    if (!@subtotal || $subtotal[-1]{employee} ne $employee) {
-      push @subtotal, { employee => $employee, amount => 0 };
+    if ($detail) {
+      my $employee = $p->{employee} || '';
+      if (!@subtotal || $subtotal[-1]{employee} ne $employee) {
+        push @subtotal, { employee => $employee, amount => 0 };
+      }
+      $subtotal[-1]{amount} += $base_due / $rate;
     }
-    $subtotal[-1]{amount} += $base_due / $rate;
 
     if ($is_checked) {
       $checked++;
@@ -248,7 +292,8 @@ sub payment_header {
   $form->{title} = $locale->text('Payment Commission');
 
   my $employee_select = $form->select_option($form->{selectemployee}, $form->{employee_id}, 1);
-  my $account_select = $form->select_option($form->{selectaccount}, $form->{payment_accno}, 1);
+  # Like Cash -> Payments, show "1060--Bank" instead of only "1060".
+  my $account_select = $form->select_option($form->{selectaccount}, $form->{payment_accno});
   my $method_select = $form->select_option($form->{selectpaymentmethod}, $form->{paymentmethod}, 1);
   my $department_select = $form->select_option($form->{selectdepartment}, $form->{department}, 1);
   my $currency_select = $form->select_option($form->{selectcurrency}, $form->{currency}, 1);
@@ -338,6 +383,31 @@ sub payment_header {
   }
 
   my $calendar = &js_calendar('main', 'datepaid');
+  my $calendar_from = &js_calendar('main', 'duedatefrom');
+  my $calendar_to = &js_calendar('main', 'duedateto');
+
+  my $duedate_label = $locale->text('Due Date');
+  my $from_label = $locale->text('From');
+  my $to_label = $locale->text('To');
+
+  my $date_filter_column = qq|
+          <td>
+            <table>
+              <tr>
+                <th align=right>$duedate_label</th>
+                <td>
+                  <table>
+                    <tr>
+                      <th align=right>$from_label</th>
+                      <td><input name=duedatefrom value="$form->{duedatefrom}" title="$myconfig{dateformat}" size=11 class=date>$calendar_from</td>
+                      <th align=right>$to_label</th>
+                      <td><input name=duedateto value="$form->{duedateto}" title="$myconfig{dateformat}" size=11 class=date>$calendar_to</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>|;
 
   $form->header;
   &calendar;
@@ -353,7 +423,8 @@ HTML
   $form->hide_form(qw(nextsub path login title payment ARAP vc precision
                       defaultcurrency employee_id employeenumber payment_accno currency
                       exchangerate oldcurrency oldexchangerate olddatepaid
-                      datepaid source memo oldall_sales view rowcount));
+                      oldduedatefrom oldduedateto
+                      datepaid duedatefrom duedateto source memo oldall_sales view rowcount));
   $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
                       selectdepartment selectcurrency));
   $form->hide_form(qw(address1 address2 city state zipcode country));
@@ -369,6 +440,7 @@ HTML
       <table width=100%>
         <tr valign=top>
 $sales_column
+$date_filter_column
           <td align=right>
             <table>
               <tr>
@@ -411,15 +483,15 @@ sub list_invoices {
   my $detail_view = (($form->{view} || '') eq 'detail');
   my @column_index = $detail_view
     ? qw(checked employee invnumber transdate duedate amount due paid discount total)
-    : qw(checked detail employee invnumber transdate duedate amount due paid discount total);
+    : qw(checked detail employee invnumber amount due paid total);
   my $colspan = $#column_index + 1;
 
-  my $invoice_label = $locale->text('Invoices');
+  my $invoice_label = $detail_view ? $locale->text('Invoices') : $locale->text('Salespersons');
   my %label = (
     checked   => '',
     detail    => $locale->text('Detail'),
     employee  => $locale->text('Salesperson'),
-    invnumber => $locale->text('Invoice'),
+    invnumber => $detail_view ? $locale->text('Invoice') : $locale->text('Invoices'),
     transdate => $locale->text('Invoice Date'),
     duedate   => $locale->text('Due Date'),
     amount    => $locale->text('Amount'),
@@ -447,12 +519,13 @@ sub list_invoices {
   my $j = 0;
 
   for my $i (1 .. ($form->{rowcount} || 0)) {
-    my $id = $form->{"id_$i"} || '';
     my $employee = $form->{"employee_$i"} || '';
     my $checked = $form->{"checked_$i"} ? 'checked' : '';
     my $save_header = $form->{header};
     $form->{header} = 0;
-    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id invnumber transdate duedate gross deduction net amount due paid_before calcdiscount));
+    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id invnumber
+      transdate duedate gross deduction net amount due paid_before calcdiscount
+      count groupids groupdues));
     $form->{header} = $save_header;
 
     $j++; $j %= 2;
@@ -460,10 +533,8 @@ sub list_invoices {
     my $detail_cell = $detail_view ? '' :
       qq|<td align=center><input name="detail_$i" type=checkbox class=checkbox value=1 onChange="javascript:document.main.submit()"></td>|;
 
-    $rows .= qq|
-        <tr class=listrow$j>
-          <td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>
-          $detail_cell
+    my $cells = $detail_view
+      ? qq|
           <td nowrap>$employee</td>
           <td>$form->{"invnumber_$i"}</td>
           <td nowrap>$form->{"transdate_$i"}</td>
@@ -472,19 +543,34 @@ sub list_invoices {
           <td align=right>$form->{"due_$i"}</td>
           <td align=center><input name="paid_$i" class=inputright size=11 value="$form->{"paid_$i"}"></td>
           <td>&nbsp;</td>
-          <td align=right>$form->{"paid_$i"}</td>
+          <td align=right>$form->{"paid_$i"}</td>|
+      : qq|
+          <td nowrap>$employee</td>
+          <td>$form->{"invnumber_$i"}</td>
+          <td align=right>$form->{"amount_$i"}</td>
+          <td align=right>$form->{"due_$i"}</td>
+          <td align=center><input name="paid_$i" class=inputright size=11 value="$form->{"paid_$i"}"></td>
+          <td align=right>$form->{"paid_$i"}</td>|;
+
+    $rows .= qq|
+        <tr class=listrow$j>
+          <td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>
+          $detail_cell
+          $cells
         </tr>
 $hidden|;
   }
 
-  # Subtotal per salesperson, then grand total.
-  my $foot_cols = $detail_view ? 3 : 4;
+  # Invoice-level subtotals only in the single-salesperson detail view;
+  # in the list view each salesperson row is already a subtotal.
+  my $foot_cols = $detail_view ? 3 : 2;
+  my $total_cols = $detail_view ? 6 : 5;
   for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
     my $employee = $subtotal->{employee} || '';
     my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
     $rows .= qq|
         <tr class=listsubtotal>
-          <td colspan=6 nowrap>$total_for_label $employee</td>
+          <td colspan=$total_cols nowrap>$total_for_label $employee</td>
           <td align=right>$amount</td>
           <td colspan=$foot_cols>&nbsp;</td>
         </tr>|;
@@ -502,7 +588,7 @@ $head
         </tr>
 $rows
         <tr class=listtotal>
-          <td colspan=6 align=right>$total_label</td>
+          <td colspan=$total_cols align=right>$total_label</td>
           <td align=right>$form->{total_due}</td>
           <td colspan=$foot_cols>&nbsp;</td>
         </tr>
@@ -564,6 +650,44 @@ sub deselect_all {
 }
 
 sub post {
+
+  # In list mode each row is one salesperson. Expand it back to the
+  # individual commission invoices before posting, distributing the
+  # entered amount across that salesperson's unpaid invoices.
+  if (($form->{view} || '') ne 'detail') {
+    my $rate = $form->parse_amount(\%myconfig, $form->{exchangerate});
+    $rate = 1 unless $rate && $rate > 0;
+    my @expand;
+
+    for my $i (1 .. ($form->{rowcount} || 0)) {
+      next unless $form->{"checked_$i"};
+      my @ids = split /,/, ($form->{"groupids_$i"} || $form->{"id_$i"} || '');
+      my @dues = split /,/, ($form->{"groupdues_$i"} || '0');
+      my $remaining = $form->parse_amount(\%myconfig, $form->{"paid_$i"} || 0);
+      $form->{employee_id} ||= $form->{"employee_id_$i"} || '';
+
+      for my $j (0 .. $#ids) {
+        last if $remaining <= 0;
+        my $due = $form->parse_amount(\%myconfig, $dues[$j] || 0) / $rate;
+        my $amount = $remaining > $due ? $due : $remaining;
+        next if $amount <= 0;
+        push @expand, {
+          id   => $ids[$j],
+          paid => $form->format_amount(\%myconfig, $amount, ($form->{precision} || 2)),
+        };
+        $remaining -= $amount;
+      }
+    }
+
+    my $n = 0;
+    for my $row (@expand) {
+      $n++;
+      $form->{"id_$n"} = $row->{id};
+      $form->{"paid_$n"} = $row->{paid};
+      $form->{"checked_$n"} = 1;
+    }
+    $form->{rowcount} = $n;
+  }
 
   my ($ok, $glid, $message) = CM->pay(\%myconfig, $form);
   $form->error($message) unless $ok;

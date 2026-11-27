@@ -107,7 +107,11 @@ sub report {
   $form->{vc} = 'vendor';
 
   $form->{datepaid} ||= $form->current_date(\%myconfig);
-  $form->{employee_id} = '' if ($form->{all_sales} || '') eq 'Y';
+  $form->{view} = 'list' unless $form->{view};
+  if ($form->{view} eq 'list') {
+    $form->{employee_id} = '';
+    $form->{all_sales} = '';
+  }
 
   &setup;
 
@@ -127,6 +131,25 @@ sub update {
   &setup unless $form->{selectemployee};
 
   my $reset = 0;
+
+  # Cash -> Payments style: tick Detail on a salesperson row to open
+  # the single-salesperson payment form.
+  my $detail_employee = '';
+  for my $i (1 .. ($form->{rowcount} || 0)) {
+    if ($form->{"detail_$i"}) {
+      $detail_employee = $form->{"employee_id_$i"} || '';
+      last;
+    }
+  }
+  if ($detail_employee && ($form->{view} || '') ne 'detail') {
+    $form->{view} = 'detail';
+    $form->{employee_id} = $detail_employee;
+    $form->{all_sales} = '';
+    $form->{rowcount} = 0;
+    $form->{allbox} = 1;
+    $reset = 1;
+  }
+
   $reset = 1 if ($form->{oldcurrency} || '') ne ($form->{currency} || '');
   $reset = 1 if ($form->{oldexchangerate} || '') ne ($form->{exchangerate} || '');
   $reset = 1 if ($form->{olddatepaid} || '') ne ($form->{datepaid} || '');
@@ -176,6 +199,7 @@ sub update {
 
     $form->{"id_$i"} = $id;
     $form->{"employee_$i"} = $p->{employee};
+    $form->{"employee_id_$i"} = "$p->{employee}--$p->{employee_id}";
     $form->{"invnumber_$i"} = $p->{invnumber};
     $form->{"transdate_$i"} = $p->{transdate};
     $form->{"duedate_$i"} = $p->{transdate};
@@ -273,42 +297,16 @@ sub payment_header {
   my $source_label = $locale->text('Source');
   my $amount_label = $locale->text('Amount');
 
-  my $calendar = &js_calendar('main', 'datepaid');
+  my $detail = (($form->{view} || '') eq 'detail');
 
-  $form->header;
-  &calendar;
-  &check_all(qw(allbox checked_));
-
-  print <<"HTML";
-<body>
-
-<form method="post" name="main" action="$form->{script}">
-<input type=hidden name=action value=update>
-HTML
-
-  $form->hide_form(qw(nextsub path login title payment ARAP vc precision
-                      defaultcurrency employee_id employeenumber payment_accno currency
-                      exchangerate oldcurrency oldexchangerate olddatepaid
-                      datepaid source memo oldall_sales rowcount));
-  $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
-                      selectdepartment selectcurrency));
-  $form->hide_form(qw(address1 address2 city state zipcode country));
-
-  print <<"HTML";
-<table width=100%>
-  <tr>
-    <th class=listtop>$form->{title}</th>
-  </tr>
-  <tr height="5"></tr>
-  <tr>
-    <td>
-      <table width=100%>
-        <tr valign=top>
+  my $sales_column = '';
+  if ($detail) {
+    $sales_column = qq|
           <td>
             <table>
               <tr>
                 <th align=right nowrap>$salesperson</th>
-                <td><select name=employee_id>$employee_select</select></td>
+                <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
               </tr>
               <tr>
                 <td align=right><input name=all_sales type=checkbox class=checkbox value=Y $allsales onChange="javascript:document.main.submit()"></td>
@@ -336,7 +334,41 @@ HTML
                 <td colspan=2><input name=showpaid type=checkbox class=checkbox value=Y $showpaid> $showpaid_label</td>
               </tr>
             </table>
-          </td>
+          </td>|;
+  }
+
+  my $calendar = &js_calendar('main', 'datepaid');
+
+  $form->header;
+  &calendar;
+  &check_all(qw(allbox checked_));
+
+  print <<"HTML";
+<body>
+
+<form method="post" name="main" action="$form->{script}">
+<input type=hidden name=action value=update>
+HTML
+
+  $form->hide_form(qw(nextsub path login title payment ARAP vc precision
+                      defaultcurrency employee_id employeenumber payment_accno currency
+                      exchangerate oldcurrency oldexchangerate olddatepaid
+                      datepaid source memo oldall_sales view rowcount));
+  $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
+                      selectdepartment selectcurrency));
+  $form->hide_form(qw(address1 address2 city state zipcode country));
+
+  print <<"HTML";
+<table width=100%>
+  <tr>
+    <th class=listtop>$form->{title}</th>
+  </tr>
+  <tr height="5"></tr>
+  <tr>
+    <td>
+      <table width=100%>
+        <tr valign=top>
+$sales_column
           <td align=right>
             <table>
               <tr>
@@ -376,12 +408,16 @@ HTML
 
 sub list_invoices {
 
-  my @column_index = qw(checked employee invnumber transdate duedate amount due paid discount total);
+  my $detail_view = (($form->{view} || '') eq 'detail');
+  my @column_index = $detail_view
+    ? qw(checked employee invnumber transdate duedate amount due paid discount total)
+    : qw(checked detail employee invnumber transdate duedate amount due paid discount total);
   my $colspan = $#column_index + 1;
 
   my $invoice_label = $locale->text('Invoices');
   my %label = (
     checked   => '',
+    detail    => $locale->text('Detail'),
     employee  => $locale->text('Salesperson'),
     invnumber => $locale->text('Invoice'),
     transdate => $locale->text('Invoice Date'),
@@ -416,14 +452,18 @@ sub list_invoices {
     my $checked = $form->{"checked_$i"} ? 'checked' : '';
     my $save_header = $form->{header};
     $form->{header} = 0;
-    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee invnumber transdate duedate gross deduction net amount due paid_before calcdiscount));
+    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee employee_id invnumber transdate duedate gross deduction net amount due paid_before calcdiscount));
     $form->{header} = $save_header;
 
     $j++; $j %= 2;
 
+    my $detail_cell = $detail_view ? '' :
+      qq|<td align=center><input name="detail_$i" type=checkbox class=checkbox value=1 onChange="javascript:document.main.submit()"></td>|;
+
     $rows .= qq|
         <tr class=listrow$j>
           <td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>
+          $detail_cell
           <td nowrap>$employee</td>
           <td>$form->{"invnumber_$i"}</td>
           <td nowrap>$form->{"transdate_$i"}</td>
@@ -438,6 +478,7 @@ $hidden|;
   }
 
   # Subtotal per salesperson, then grand total.
+  my $foot_cols = $detail_view ? 3 : 4;
   for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
     my $employee = $subtotal->{employee} || '';
     my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
@@ -445,7 +486,7 @@ $hidden|;
         <tr class=listsubtotal>
           <td colspan=6 nowrap>$total_for_label $employee</td>
           <td align=right>$amount</td>
-          <td colspan=3>&nbsp;</td>
+          <td colspan=$foot_cols>&nbsp;</td>
         </tr>|;
   }
 
@@ -463,7 +504,7 @@ $rows
         <tr class=listtotal>
           <td colspan=6 align=right>$total_label</td>
           <td align=right>$form->{total_due}</td>
-          <td colspan=3>&nbsp;</td>
+          <td colspan=$foot_cols>&nbsp;</td>
         </tr>
       </table>
     </td>
@@ -487,6 +528,8 @@ sub payment_footer {
   } else {
     delete $button{'Deselect all'};
   }
+
+  delete $button{'Back'} unless ($form->{view} || '') eq 'detail';
 
   $form->print_button(\%button);
 
@@ -530,9 +573,11 @@ sub post {
 }
 
 sub back {
+  $form->{view} = 'list';
+  $form->{employee_id} = '';
+  $form->{all_sales} = '';
   $form->{rowcount} = 0;
   $form->{allbox} = 1;
-  for my $i (1 .. ($form->{rowcount} || 0)) { $form->{"checked_$i"} = 0 }
   &report;
 }
 

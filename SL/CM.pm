@@ -250,7 +250,8 @@ sub outstanding {
 
   my $dbh = $form->dbconnect($myconfig);
 
-  my $employee_id = _employee_id($form->{employee_id});
+  my $all_sales = ($form->{all_sales} || '') eq 'Y';
+  my $employee_id = $all_sales ? 0 : _employee_id($form->{employee_id});
   my $where = '';
   $where .= " AND p.employee_id = $employee_id" if $employee_id;
   $where .= " AND p.paid < p.net - 0.005" unless $form->{showpaid};
@@ -286,7 +287,6 @@ sub pay {
 
   my $result = eval {
     my $employee_id = _employee_id($form->{employee_id});
-    die $main::locale->text('Salesperson missing!') unless $employee_id;
 
     my ($accno) = split /--/, ($form->{payment_accno} || '');
     die $main::locale->text('Payment account missing!') unless $accno;
@@ -326,6 +326,12 @@ sub pay {
     }
 
     die $main::locale->text('Nothing to pay!') unless $rows;
+
+    if (!$employee_id) {
+      ($employee_id) = $dbh->selectrow_array(qq|
+        SELECT employee_id FROM commission_payable WHERE id = $ids[0]|);
+    }
+    die $main::locale->text('Salesperson missing!') unless $employee_id;
 
     my $list = join ',', @ids;
     my $sth = $dbh->prepare(qq|

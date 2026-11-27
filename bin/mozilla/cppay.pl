@@ -17,7 +17,7 @@ sub setup {
   my @employee = @{ $form->{CM_employees} || [] };
   $form->{selectemployee} = join "\n", map { "$_->{name}--$_->{id}" } @employee;
 
-  if (!$form->{employee_id} && @employee) {
+  if (!$form->{employee_id} && @employee && ($form->{all_sales} || '') ne 'Y') {
     $form->{employee_id} = "$employee[0]{name}--$employee[0]{id}";
   }
 
@@ -25,6 +25,9 @@ sub setup {
   $employee_id *= 1;
 
   if ($employee_id) {
+    my ($number) = $dbh->selectrow_array(qq|SELECT employeenumber FROM employee WHERE id = $employee_id|);
+    $form->{employeenumber} = $number || '';
+
     my $query = qq|SELECT address1, address2, city, state, zipcode, country
                    FROM address WHERE trans_id = $employee_id ORDER BY id LIMIT 1|;
     my $sth = $dbh->prepare($query) || $form->dberror($query);
@@ -33,6 +36,9 @@ sub setup {
       for (qw(address1 address2 city state zipcode country)) { $form->{$_} = $a->{$_} || '' }
     }
     $sth->finish;
+  } else {
+    $form->{employeenumber} = '';
+    for (qw(address1 address2 city state zipcode country)) { $form->{$_} = '' }
   }
 
   # Payment accounts, same source as Cash -> Payments (AP_paid accounts).
@@ -100,6 +106,7 @@ sub report {
   $form->{vc} = 'vendor';
 
   $form->{datepaid} ||= $form->current_date(\%myconfig);
+  $form->{employee_id} = '' if ($form->{all_sales} || '') eq 'Y';
 
   &setup;
 
@@ -108,6 +115,7 @@ sub report {
   $form->{oldcurrency} = $form->{currency};
   $form->{oldexchangerate} = $form->{exchangerate};
   $form->{olddatepaid} = $form->{datepaid};
+  $form->{oldall_sales} = $form->{all_sales} || '';
   $form->{allbox} = 1 unless defined $form->{allbox};
 
   &update;
@@ -121,6 +129,7 @@ sub update {
   $reset = 1 if ($form->{oldcurrency} || '') ne ($form->{currency} || '');
   $reset = 1 if ($form->{oldexchangerate} || '') ne ($form->{exchangerate} || '');
   $reset = 1 if ($form->{olddatepaid} || '') ne ($form->{datepaid} || '');
+  $reset = 1 if ($form->{oldall_sales} || '') ne ($form->{all_sales} || '');
 
   my %old;
   unless ($reset) {
@@ -142,8 +151,9 @@ sub update {
 
   my $i = 0;
   my $checked = 0;
-  my $total_amount = 0;
+  my $total_due = 0;
   my $total_paid = 0;
+  my @subtotal;
 
   for my $p (@{ $form->{CM_outstanding} || [] }) {
     $i++;
@@ -164,6 +174,7 @@ sub update {
     }
 
     $form->{"id_$i"} = $id;
+    $form->{"employee_$i"} = $p->{employee};
     $form->{"invnumber_$i"} = $p->{invnumber};
     $form->{"transdate_$i"} = $p->{transdate};
     $form->{"duedate_$i"} = $p->{transdate};
@@ -177,13 +188,22 @@ sub update {
     $form->{"checked_$i"} = $is_checked;
     $form->{"calcdiscount_$i"} = 0;
 
+    $total_due += $base_due / $rate;
+
+    my $employee = $p->{employee} || '';
+    if (!@subtotal || $subtotal[-1]{employee} ne $employee) {
+      push @subtotal, { employee => $employee, amount => 0 };
+    }
+    $subtotal[-1]{amount} += $base_due / $rate;
+
     if ($is_checked) {
       $checked++;
-      $total_amount += $base_due / $rate;
       $total_paid += $form->parse_amount(\%myconfig, $paid);
     }
   }
 
+  $form->{CM_subtotal} = \@subtotal;
+  $form->{total_due} = $form->format_amount(\%myconfig, $total_due, ($form->{precision} || 2));
   $form->{rowcount} = $i;
   $form->{allbox} = ($i && $checked == $i) ? 1 : 0;
   $form->{amount} = $form->format_amount(\%myconfig, $total_paid, ($form->{precision} || 2));
@@ -191,6 +211,7 @@ sub update {
   $form->{oldcurrency} = $form->{currency};
   $form->{oldexchangerate} = $form->{exchangerate};
   $form->{olddatepaid} = $form->{datepaid};
+  $form->{oldall_sales} = $form->{all_sales} || '';
 
   &payment_header;
   &list_invoices;
@@ -218,7 +239,9 @@ sub payment_header {
   }
 
   my $showpaid = ($form->{showpaid} || '') eq 'Y' ? 'checked' : '';
+  my $allsales = ($form->{all_sales} || '') eq 'Y' ? 'checked' : '';
 
+  my $all_label = $locale->text('All');
   my $salesperson = $locale->text('Salesperson');
   my $address = $locale->text('Address');
   my $memo = $locale->text('Memo');
@@ -245,9 +268,9 @@ sub payment_header {
 HTML
 
   $form->hide_form(qw(nextsub path login title payment ARAP vc precision
-                      defaultcurrency employee_id payment_accno currency
+                      defaultcurrency employee_id employeenumber payment_accno currency
                       exchangerate oldcurrency oldexchangerate olddatepaid
-                      datepaid source memo showpaid rowcount));
+                      datepaid source memo oldall_sales rowcount));
   $form->hide_form(qw(selectemployee selectaccount selectpaymentmethod
                       selectdepartment selectcurrency));
   $form->hide_form(qw(address1 address2 city state zipcode country));
@@ -267,6 +290,10 @@ HTML
               <tr>
                 <th align=right nowrap>$salesperson</th>
                 <td><select name=employee_id onChange="javascript:document.main.submit()">$employee_select</select></td>
+              </tr>
+              <tr>
+                <td align=right><input name=all_sales type=checkbox class=checkbox value=Y $allsales onChange="javascript:document.main.submit()"></td>
+                <th align=left>$all_label</th>
               </tr>
               <tr>
                 <th align=right nowrap>$address</th>
@@ -336,12 +363,13 @@ HTML
 
 sub list_invoices {
 
-  my @column_index = qw(checked invnumber transdate duedate amount due paid discount total);
+  my @column_index = qw(checked employee invnumber transdate duedate amount due paid discount total);
   my $colspan = $#column_index + 1;
 
   my $invoice_label = $locale->text('Invoices');
   my %label = (
     checked   => '',
+    employee  => $locale->text('Salesperson'),
     invnumber => $locale->text('Invoice'),
     transdate => $locale->text('Invoice Date'),
     duedate   => $locale->text('Due Date'),
@@ -363,16 +391,19 @@ sub list_invoices {
     $head .= "\n";
   }
 
+  my $total_for_label = $locale->text('Total for');
+  my $total_label = $locale->text('Total');
+
   my $rows = '';
   my $j = 0;
-  my $totals = { map { $_ => 0 } @column_index };
 
   for my $i (1 .. ($form->{rowcount} || 0)) {
     my $id = $form->{"id_$i"} || '';
+    my $employee = $form->{"employee_$i"} || '';
     my $checked = $form->{"checked_$i"} ? 'checked' : '';
     my $save_header = $form->{header};
     $form->{header} = 0;
-    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id invnumber transdate duedate gross deduction net amount due paid_before calcdiscount));
+    my $hidden = $form->hide_form(map { "${_}_$i" } qw(id employee invnumber transdate duedate gross deduction net amount due paid_before calcdiscount));
     $form->{header} = $save_header;
 
     $j++; $j %= 2;
@@ -380,6 +411,7 @@ sub list_invoices {
     $rows .= qq|
         <tr class=listrow$j>
           <td align=center><input name="checked_$i" type=checkbox class=checkbox $checked onChange="javascript:document.main.submit()"></td>
+          <td nowrap>$employee</td>
           <td>$form->{"invnumber_$i"}</td>
           <td nowrap>$form->{"transdate_$i"}</td>
           <td nowrap>$form->{"duedate_$i"}</td>
@@ -392,8 +424,17 @@ sub list_invoices {
 $hidden|;
   }
 
-  my $foot = '';
-  for (@column_index) { $foot .= "<td>&nbsp;</td>\n" }
+  # Subtotal per salesperson, then grand total.
+  for my $subtotal (@{ $form->{CM_subtotal} || [] }) {
+    my $employee = $subtotal->{employee} || '';
+    my $amount = $form->format_amount(\%myconfig, $subtotal->{amount}, ($form->{precision} || 2));
+    $rows .= qq|
+        <tr class=listsubtotal>
+          <td colspan=6 nowrap>$total_for_label $employee</td>
+          <td align=right>$amount</td>
+          <td colspan=3>&nbsp;</td>
+        </tr>|;
+  }
 
   print qq|
   <tr>
@@ -407,7 +448,9 @@ $head
         </tr>
 $rows
         <tr class=listtotal>
-$foot
+          <td colspan=6 align=right>$total_label</td>
+          <td align=right>$form->{total_due}</td>
+          <td colspan=3>&nbsp;</td>
         </tr>
       </table>
     </td>

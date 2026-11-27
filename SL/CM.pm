@@ -305,19 +305,22 @@ sub pay {
     my $source = $dbh->quote($form->{source} || 'Commission Payment');
     my $memo = $dbh->quote($form->{memo} || 'Commission payment');
 
+    my $rate = $form->parse_amount($myconfig, $form->{exchangerate});
+    $rate = 1 unless $rate && $rate > 0;
+
     my @ids;
     my %pay;
     my $rows = 0;
 
     for my $i (1 .. ($form->{rowcount} || 0)) {
-      next unless $form->{"ndx_$i"};
+      next unless $form->{"checked_$i"};
       my $id = $form->{"id_$i"} || 0;
       next unless $id =~ /^\d+$/;
 
       my $amount = $form->parse_amount($myconfig, $form->{"paid_$i"} || 0);
       next unless $amount > 0;
 
-      $pay{$id} = $amount;
+      $pay{$id} = $form->round_amount($amount * $rate, 2);
       push @ids, $id;
       $rows++;
     }
@@ -341,8 +344,12 @@ sub pay {
       die $main::locale->text('Commission not found!') unless $ref;
 
       my $due = $ref->{net} - $ref->{paid};
-      die $main::locale->text('Payment exceeds outstanding commission!')
-        if $pay{$id} > $due + 0.005;
+      my $tolerance = $rate * 0.01 + 0.005;
+      if ($pay{$id} > $due) {
+        die $main::locale->text('Payment exceeds outstanding commission!')
+          if $pay{$id} > $due + $tolerance;
+        $pay{$id} = $due;
+      }
 
       $total_paid += $pay{$id};
       next if $ref->{accrual_posted};

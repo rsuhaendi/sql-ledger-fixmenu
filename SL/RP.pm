@@ -1406,6 +1406,11 @@ sub aging {
     }
   }
 
+  if ($form->{vc} eq 'vendor' && $form->{arap} eq 'ap') {
+    require SL::CM;
+    CM->ap_aging($myconfig, $form, $dbh);
+  }
+
   # get language
   $form->all_languages($myconfig, $dbh);
   

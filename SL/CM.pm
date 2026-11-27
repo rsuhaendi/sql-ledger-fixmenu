@@ -570,4 +570,100 @@ sub ap_outstanding {
   $sth->finish;
 }
 
+sub ap_aging {
+  my ($self, $myconfig, $form, $dbh) = @_;
+
+  return unless $form->{vc} eq 'vendor' && $form->{arap} eq 'ap';
+
+  my @where;
+  my $employee_id = _employee_id($form->{employee});
+  push @where, "p.employee_id = $employee_id" if $employee_id;
+
+  if ($form->{vendor}) {
+    my $name = $form->like(lc $form->{vendor});
+    push @where, "lower(e.name) LIKE ".$dbh->quote($name);
+  }
+
+  push @where, "p.paid < p.net - 0.005";
+
+  my $transdate = ($form->{overdue}) ? 'p.transdate' : 'p.transdate';
+  push @where, "$transdate <= ".$dbh->quote($form->{todate}) if $form->{todate};
+
+  my $where = @where ? 'WHERE '.join(' AND ', @where) : '';
+
+  my $query = qq|
+    SELECT p.*, e.name AS employee, e.employeenumber
+    FROM commission_payable p
+    JOIN employee e ON (e.id = p.employee_id)
+    $where
+    ORDER BY e.name, p.transdate, p.invnumber|;
+
+  my $sth = $dbh->prepare($query) || $form->dberror($query);
+  $sth->execute;
+
+  my @buckets = qw(c0 c15 c30 c45 c60 c75 c90);
+  my @active = grep { $form->{$_} } @buckets;
+  @active = @buckets unless @active;
+
+  my $to = $form->{todate};
+  $to =~ s/\D//g;
+  $to = substr($to, 0, 8);
+
+  while (my $p = $sth->fetchrow_hashref(NAME_lc)) {
+    my $due = ($p->{net} || 0) - ($p->{paid} || 0);
+    next unless $due > 0.005;
+
+    my $dt = $p->{transdate};
+    $dt =~ s/\D//g;
+    $dt = substr($dt, 0, 8);
+    next unless $dt && $to;
+
+    my $days = _days_between($dt, $to);
+    my $bucket = 'c90';
+    if    ($days <= 0)  { $bucket = 'c0'; }
+    elsif ($days <= 15) { $bucket = 'c15'; }
+    elsif ($days <= 30) { $bucket = 'c30'; }
+    elsif ($days <= 45) { $bucket = 'c45'; }
+    elsif ($days <= 60) { $bucket = 'c60'; }
+    elsif ($days <= 75) { $bucket = 'c75'; }
+    else                { $bucket = 'c90'; }
+    next unless grep { $_ eq $bucket } @active;
+
+    my $ref = {
+      vc_id         => $p->{employee_id},
+      vendornumber  => $p->{employeenumber} || '',
+      name          => $p->{employee},
+      address1      => '', address2 => '', city => '', state => '', zipcode => '', country => '',
+      contact       => '',
+      vendorphone   => '', vendorfax => '', vendortaxnumber => '',
+      invdescription=> 'Sales commission',
+      invnumber     => $p->{invnumber} || 'Commission',
+      transdate     => _fmt_date($form, $myconfig, $p->{transdate}),
+      till          => '',
+      ordnumber     => '', ponumber => '', notes => '',
+      duedate       => _fmt_date($form, $myconfig, $p->{transdate}),
+      invoice       => 0,
+      id            => -$p->{id},
+      curr          => $form->{defaultcurrency} || 'IDR',
+      exchangerate  => 1,
+      firstname     => '', lastname => '', salutation => '', typeofcontact => '',
+    };
+    for (@buckets) { $ref->{$_} = ($_ eq $bucket) ? $due : 0 }
+    push @{ $form->{AG} }, $ref;
+  }
+  $sth->finish;
+}
+
+sub _days_between {
+  my ($from, $to) = @_;
+  # expects yyyymmdd
+  return 0 unless $from =~ /^\d{8}$/ && $to =~ /^\d{8}$/;
+  my @f = $from =~ /(\d{4})(\d{2})(\d{2})/;
+  my @t = $to   =~ /(\d{4})(\d{2})(\d{2})/;
+  require Time::Local;
+  my $df = Time::Local::timegm(0,0,12,$f[2],$f[1]-1,$f[0]);
+  my $dt = Time::Local::timegm(0,0,12,$t[2],$t[1]-1,$t[0]);
+  return int(($dt - $df) / 86400);
+}
+
 1;

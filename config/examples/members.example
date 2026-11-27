@@ -1,0 +1,25 @@
+# SQL-Ledger members (EXAMPLE - DO NOT USE REAL PASSWORDS IN GIT)
+# Real file: users/members (ignored by git)
+
+[root login]
+password=PUT_ROOT_CRYPT_PASSWORD_HERE
+
+[admin@ledger]
+charset=UTF8
+dateformat=yyyy-mm-dd
+dbconnect=dbi:Pg:dbname=ledger;host=localhost;port=5432
+dbdriver=Pg
+dbhost=localhost
+dbname=ledger
+dboptions=;set client_encoding to 'UTF8'
+dbpasswd=PUT_UUENCODED_DB_PASSWORD_HERE
+dbport=5432
+dbuser=sql-ledger
+email=admin@example.com
+name=Admin
+numberformat=1,000.00
+outputformat=html
+password=PUT_CRYPT_PASSWORD_HERE
+stylesheet=sql-ledger-buttons.css
+templates=ledger
+vclimit=1000

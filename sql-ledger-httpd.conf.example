@@ -1,0 +1,29 @@
+# Copy to /etc/apache2/conf-available/sql-ledger.conf
+# then: a2enconf sql-ledger && a2enmod cgi && systemctl reload apache2
+
+Alias /sql-ledger/ "/sql-ledger/"
+
+<Directory "/sql-ledger">
+    Options +ExecCGI -Indexes -FollowSymLinks
+    AddHandler cgi-script .pl
+    DirectoryIndex index.html
+    Require all granted
+</Directory>
+
+# Never expose the source repository or sensitive files over HTTP.
+<Directory "/sql-ledger/.git">
+    Require all denied
+</Directory>
+<Directory "/sql-ledger/users">
+    Require all denied
+</Directory>
+<Directory "/sql-ledger/spool">
+    Require all denied
+</Directory>
+<Directory "/sql-ledger/templates">
+    Require all denied
+</Directory>
+
+<FilesMatch "^(\.git|sql-ledger\.conf|.*\.conf)$">
+    Require all denied
+</FilesMatch>

@@ -1,0 +1,22 @@
+# configuration file for admin@ledger (EXAMPLE - DO NOT COMMIT REAL FILE)
+
+%myconfig = (
+  charset => 'UTF8',
+  dateformat => 'yyyy-mm-dd',
+  dbconnect => 'dbi:Pg:dbname=ledger;host=localhost;port=5432',
+  dbdriver => 'Pg',
+  dbhost => 'localhost',
+  dbname => 'ledger',
+  dboptions => ';set client_encoding to \'UTF8\'',
+  dbpasswd => 'PUT_UUENCODED_DB_PASSWORD_HERE',
+  dbport => '5432',
+  dbuser => 'sql-ledger',
+  name => 'Admin',
+  email => 'admin@example.com',
+  numberformat => '1,000.00',
+  password => 'PUT_CRYPT_PASSWORD_HERE',
+  outputformat => 'html',
+  stylesheet => 'sql-ledger-buttons.css',
+  templates => 'ledger',
+  vclimit => '1000',
+);

@@ -1698,13 +1698,6 @@ sub search {
 	      </tr>
 |;
 
-  # Kept separate from Open/Closed so it reads as a different kind of filter.
-  $scheduled = qq|
-	      <tr>
-		<td colspan=5 nowrap><input name=scheduled class=checkbox type=checkbox value=Y> |.$locale->text('Scheduled').qq| (|.$locale->text('Master Invoice').qq|)</td>
-	      </tr>
-|;
-
   $summary = qq|
               <tr>
 		<td><input name=summary type=radio class=radio value=1 checked> |.$locale->text('Summary').qq|</td>
@@ -1856,7 +1849,6 @@ sub search {
 	  <td>
 	    <table width=100%>
 	      $openclosed
-	      $scheduled
 	      $summary
 |;
 
@@ -1923,14 +1915,14 @@ sub transactions {
   AA->transactions(\%myconfig, \%$form);
 
   $href = "$form->{script}?action=transactions";
-  for (qw(direction oldsort till outstanding path login summary revtrans scheduled)) { $href .= qq|&$_=$form->{$_}| }
+  for (qw(direction oldsort till outstanding path login summary revtrans)) { $href .= qq|&$_=$form->{$_}| }
   $href .= "&title=".$form->escape($form->{title});
   $href .= "&helpref=".$form->escape($form->{helpref});
 
   $form->sort_order();
   
   $callback = "$form->{script}?action=transactions";
-  for (qw(direction oldsort till outstanding path login summary scheduled)) { $callback .= qq|&$_=$form->{$_}| }
+  for (qw(direction oldsort till outstanding path login summary)) { $callback .= qq|&$_=$form->{$_}| }
   $callback .= "&title=".$form->escape($form->{title},1);
   $callback .= "&helpref=".$form->escape($form->{helpref},1);
 
@@ -2050,42 +2042,35 @@ sub transactions {
     $option .= "\n<br>" if ($option);
     $option .= $locale->text('To')."&nbsp;".$locale->date(\%myconfig, $form->{transdateto}, 1);
   }
-  if ($form->{scheduled}) {
-    $callback .= "&scheduled=$form->{scheduled}";
-    $href .= "&scheduled=$form->{scheduled}";
+  if ($form->{open}) {
+    $callback .= "&open=$form->{open}";
+    $href .= "&open=$form->{open}";
     $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Scheduled')." (".$locale->text('Master Invoice').")";
-  } else {
-    if ($form->{open}) {
-      $callback .= "&open=$form->{open}";
-      $href .= "&open=$form->{open}";
-      $option .= "\n<br>" if ($option);
-      $option .= $locale->text('Open');
-    }
-    if ($form->{closed}) {
-      $callback .= "&closed=$form->{closed}";
-      $href .= "&closed=$form->{closed}";
-      $option .= "\n<br>" if ($option);
-      $option .= $locale->text('Closed');
-    }
-    if ($form->{onhold}) {
-      $callback .= "&onhold=$form->{onhold}";
-      $href .= "&onhold=$form->{onhold}";
-      $option .= "\n<br>" if ($option);
-      $option .= $locale->text('On Hold');
-    }
-    if ($form->{paidlate}) {
-      $callback .= "&paidlate=$form->{paidlate}";
-      $href .= "&paidlate=$form->{paidlate}";
-      $option .= "\n<br>" if ($option);
-      $option .= $locale->text('Paid Late');
-    }
-    if ($form->{paidearly}) {
-      $callback .= "&paidearly=$form->{paidearly}";
-      $href .= "&paidearly=$form->{paidearly}";
-      $option .= "\n<br>" if ($option);
-      $option .= $locale->text('Paid Early');
-    }
+    $option .= $locale->text('Open');
+  }
+  if ($form->{closed}) {
+    $callback .= "&closed=$form->{closed}";
+    $href .= "&closed=$form->{closed}";
+    $option .= "\n<br>" if ($option);
+    $option .= $locale->text('Closed');
+  }
+  if ($form->{onhold}) {
+    $callback .= "&onhold=$form->{onhold}";
+    $href .= "&onhold=$form->{onhold}";
+    $option .= "\n<br>" if ($option);
+    $option .= $locale->text('On Hold');
+  }
+  if ($form->{paidlate}) {
+    $callback .= "&paidlate=$form->{paidlate}";
+    $href .= "&paidlate=$form->{paidlate}";
+    $option .= "\n<br>" if ($option);
+    $option .= $locale->text('Paid Late');
+  }
+  if ($form->{paidearly}) {
+    $callback .= "&paidearly=$form->{paidearly}";
+    $href .= "&paidearly=$form->{paidearly}";
+    $option .= "\n<br>" if ($option);
+    $option .= $locale->text('Paid Early');
   }
 
 

@@ -4338,15 +4338,21 @@ sub recurring_transactions {
   
   $form->sort_order();
   
-  my @column_index = qw(ndx reference description name vcnumber);
+  my @column_index = qw(ndx masterinvoice reference description name vcnumber);
   
   push @column_index, qw(nextdate enddate id amount curr repeat howmany recurringemail recurringprint);
+
+  my $colspan = $#column_index + 1;
+  my $master_count = 0;
+  for (keys %{ $form->{transactions} }) { $master_count += @{ $form->{transactions}{$_} } }
+  my $count_text = $master_count." ".$locale->text('Invoice');
 
   my %column_data;
 
   $form->{allbox} = ($form->{allbox}) ? "checked" : "";
   $action = ($form->{deselect}) ? "deselect_all" : "select_all";
   $column_data{ndx} = qq|<th class=listheading width=1%><input name="allbox" type=checkbox class=checkbox value="1" $form->{allbox} onChange="CheckAll(); javascript:document.main.submit()"><input type=hidden name=action value="$action"></th>|;
+  $column_data{masterinvoice} = "<th class=listheading nowrap>".$locale->text('Master Invoice')."</th>";
   
   $column_data{reference} = "<th><a class=listheading href=$href&sort=reference>".$locale->text('Reference').qq"</a></th>";
   $column_data{id} = "<th class=listheading>".$locale->text('ID')."</th>";
@@ -4389,6 +4395,9 @@ print qq|
   </tr>
   <tr height="5"></tr>
   <tr>
+    <td colspan=$colspan><b>$count_text</b></td>
+  </tr>
+  <tr>
     <td>
       <table width=100%>
         <tr class=listheading>
@@ -4403,7 +4412,6 @@ print qq|
   my $i = 1;
   my $j;
   my $k;
-  my $colspan = $#column_index + 1;
   my %tr = ( ar => $locale->text('AR'),
              ap => $locale->text('AP'),
 	     gl => $locale->text('GL'),
@@ -4442,6 +4450,7 @@ print qq|
       }
 
       $column_data{ndx} = qq|<td></td>|;
+      $column_data{masterinvoice} = "<td nowrap>".($ref->{masterinvoice} || "&nbsp;")."</td>";
       
       if (!$ref->{expired}) {
 	$k++;

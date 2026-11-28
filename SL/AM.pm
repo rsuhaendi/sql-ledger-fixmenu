@@ -1271,7 +1271,7 @@ sub recurring_transactions {
               ORDER BY rn|;
   my ($defaultcurrency) = $dbh->selectrow_array($query);
  
-  $query = qq|SELECT 'ar' AS module, 'ar' AS transaction, a.invoice,
+  $query = qq|SELECT 'ar' AS module, 'ar' AS transaction, a.invoice, a.invnumber AS masterinvoice,
                  a.description, n.name, n.customernumber AS vcnumber,
 		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
@@ -1288,7 +1288,7 @@ sub recurring_transactions {
 
 	 UNION
 
-                 SELECT 'ap' AS module, 'ap' AS transaction, a.invoice,
+                 SELECT 'ap' AS module, 'ap' AS transaction, a.invoice, a.invnumber AS masterinvoice,
 		 a.description, n.name, n.vendornumber AS vcnumber,
 		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
@@ -1305,7 +1305,7 @@ sub recurring_transactions {
 	
 	 UNION
 
-                 SELECT 'gl' AS module, 'gl' AS transaction, FALSE AS invoice,
+                 SELECT 'gl' AS module, 'gl' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, '' AS name, '' AS vcnumber, 0 AS name_id,
 		 (SELECT SUM(ac.amount) FROM acc_trans ac WHERE ac.trans_id = a.id AND ac.amount > 0) AS amount,
                  s.*, se.formname AS recurringemail,
@@ -1320,7 +1320,7 @@ sub recurring_transactions {
 	
 	UNION
 
-                 SELECT 'oe' AS module, 'so' AS transaction, FALSE AS invoice,
+                 SELECT 'oe' AS module, 'so' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, n.name, n.customernumber AS vcnumber,
 		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
@@ -1338,7 +1338,7 @@ sub recurring_transactions {
 		 
 	UNION
 
-                 SELECT 'oe' AS module, 'po' AS transaction, FALSE AS invoice,
+                 SELECT 'oe' AS module, 'po' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, n.name, n.vendornumber AS vcnumber,
 		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,

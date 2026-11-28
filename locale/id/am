@@ -77,6 +77,7 @@ $self{texts} = {
   'Include in drop-down menus'  => 'Tampilkan pada menu drop-down',
   'Income'                      => 'Pendapatan',
   'Invoice'                     => 'Invoice',
+  'Master Invoice'              => 'Invoice Master',
   'Is this a summary account to record' => 'Akun ini adalah akun ringkasan untuk mencatat',
   'January'                     => 'Januari',
   'July'                        => 'Juli',

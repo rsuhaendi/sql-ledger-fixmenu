@@ -939,36 +939,27 @@ sub transactions {
   $where .= " AND a.transdate >= '$form->{transdatefrom}'" if $form->{transdatefrom};
   $where .= " AND a.transdate <= '$form->{transdateto}'" if $form->{transdateto};
 
-  # Scheduled mode lists only master invoices, i.e. the original transaction
-  # that created the recurring rule (recurring.id = transaction id). The
-  # Open/Closed/On Hold/Paid Late filters are skipped entirely in this mode so
-  # they cannot conflict with the scheduled result. The form values themselves
-  # are left untouched.
-  if ($form->{scheduled}) {
-    $where .= " AND a.id IN (SELECT id FROM recurring)";
-  } else {
-    if ($form->{paidlate} || $form->{paidearly}) {
-      $form->{open} = 0;
-      $form->{closed} = 1;
-      if ($form->{paidlate}) {
-        $where .= " AND a.datepaid > a.duedate" unless $form->{paidearly};
-      }
-      if ($form->{paidearly}) {
-        $where .= " AND a.datepaid <= a.duedate" unless $form->{paidlate};
-      }
+  if ($form->{paidlate} || $form->{paidearly}) {
+    $form->{open} = 0;
+    $form->{closed} = 1;
+    if ($form->{paidlate}) {
+      $where .= " AND a.datepaid > a.duedate" unless $form->{paidearly};
     }
-
-    if ($form->{onhold}) {
-      $where .= " AND a.onhold = '1'";
+    if ($form->{paidearly}) {
+      $where .= " AND a.datepaid <= a.duedate" unless $form->{paidlate};
     }
+  }
 
-    if ($form->{open} || $form->{closed}) {
-      if ($form->{open}) {
-        $where .= " AND a.amount != a.paid" unless $form->{closed};
-      }
-      if ($form->{closed}) {
-        $where .= " AND a.amount = a.paid" unless $form->{open};
-      }
+  if ($form->{onhold}) {
+    $where .= " AND a.onhold = '1'";
+  }
+
+  if ($form->{open} || $form->{closed}) {
+    if ($form->{open}) {
+      $where .= " AND a.amount != a.paid" unless $form->{closed};
+    }
+    if ($form->{closed}) {
+      $where .= " AND a.amount = a.paid" unless $form->{open};
     }
   }
 

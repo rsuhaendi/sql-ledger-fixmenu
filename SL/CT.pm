@@ -474,9 +474,23 @@ sub save {
     for my $coord (qw(latitude longitude)) {
       my $v = defined $form->{$coord} ? $form->{$coord} : '';
       $v =~ s/^\s+|\s+$//g;
-      $v =~ s/,/./g;
-      $v =~ s/[^0-9.+-]//g;
-      if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+      my $orig = $v;
+      my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
+      my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
+      if ($orig =~ /[NSEWnsew°º'"\x{00B0}\x{00BA}\x{2032}\x{2033}]/ && @nums >= 2) {
+        for (@nums) { s/,/./g; }
+        my $deg = abs($nums[0] || 0);
+        my $min = abs($nums[1] || 0);
+        my $sec = abs($nums[2] || 0);
+        my $dec = $deg + ($min / 60) + ($sec / 3600);
+        $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
+        $v = sprintf('%.8f', $dec);
+        $v =~ s/\.?0+$//;
+      } else {
+        $v =~ s/,/./g;
+        $v =~ s/[^0-9.+-]//g;
+        if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+      }
       $form->{$coord} = $v;
     }
     # If lat/long provided, keep coordinate string in sync for compatibility

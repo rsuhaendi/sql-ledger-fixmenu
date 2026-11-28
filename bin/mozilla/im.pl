@@ -1866,8 +1866,19 @@ sub im_vc {
     for my $c (qw(latitude longitude)) {
       my $v = $form->{"${c}_$i"};
       next unless defined $v && $v ne '';
-      $v =~ s/^\s+|\s+$//g; $v =~ s/,/./g; $v =~ s/[^0-9.+-]//g;
-      if ($v =~ /(-?\d+(?:\.\d+)?)/) { $form->{"${c}_$i"} = $1; } else { $form->{"${c}_$i"} = ''; }
+      $v =~ s/^\s+|\s+$//g;
+      my $orig = $v; my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
+      my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
+      if ($orig =~ /[NSEWnsew°º'"\x{00B0}\x{00BA}\x{2032}\x{2033}]/ && @nums >= 2) {
+        for (@nums) { s/,/./g; }
+        my $dec = abs($nums[0]||0) + (abs($nums[1]||0)/60) + (abs($nums[2]||0)/3600);
+        $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
+        $v = sprintf('%.8f', $dec); $v =~ s/\.?0+$//;
+        $form->{"${c}_$i"} = $v;
+      } else {
+        $v =~ s/,/./g; $v =~ s/[^0-9.+-]//g;
+        if ($v =~ /(-?\d+(?:\.\d+)?)/) { $form->{"${c}_$i"} = $1; } else { $form->{"${c}_$i"} = ''; }
+      }
     }
   }
   

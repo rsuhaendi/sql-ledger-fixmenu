@@ -980,10 +980,24 @@ sub import_vc {
           if ($imported{$coord} && defined $newform->{$coord}) {
             my $v = $newform->{$coord};
             $v =~ s/^\s+|\s+$//g;
-            $v =~ s/,/./g;
-            $v =~ s/[^0-9.+-]//g; # strip degree symbols, ?, etc.
-            # keep only first valid-looking signed decimal
-            if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+            my $orig = $v;
+            my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
+            # DMS: degrees/minutes/seconds, e.g. 6°58'13.88"S or 6 58 13.88 S
+            my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
+            if ($orig =~ /[NSEWnsew°º'"\x{00B0}\x{00BA}\x{2032}\x{2033}]/ && @nums >= 2) {
+              for (@nums) { s/,/./g; }
+              my $deg = abs($nums[0] || 0);
+              my $min = abs($nums[1] || 0);
+              my $sec = abs($nums[2] || 0);
+              my $dec = $deg + ($min / 60) + ($sec / 3600);
+              $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
+              $v = sprintf('%.8f', $dec);
+              $v =~ s/\.?0+$//;
+            } else {
+              $v =~ s/,/./g;
+              $v =~ s/[^0-9.+-]//g;
+              if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+            }
             $newform->{$coord} = $v;
           }
         }

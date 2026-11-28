@@ -472,13 +472,12 @@ sub save {
   if ($form->{db} eq 'customer') {
     # Normalize latitude/longitude: accept degree symbol, comma decimal, spaces
     for my $coord (qw(latitude longitude)) {
-      if (defined $form->{$coord} && $form->{$coord} ne '') {
-        $form->{$coord} =~ s/[°º\s]+//g;
-        $form->{$coord} =~ s/,/./g;
-        $form->{$coord} = '' unless $form->{$coord} =~ /^-?\d+(?:\.\d+)?$/;
-      } else {
-        $form->{$coord} = '';
-      }
+      my $v = defined $form->{$coord} ? $form->{$coord} : '';
+      $v =~ s/^\s+|\s+$//g;
+      $v =~ s/,/./g;
+      $v =~ s/[^0-9.+-]//g;
+      if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+      $form->{$coord} = $v;
     }
     # If lat/long provided, keep coordinate string in sync for compatibility
     if ($form->{latitude} ne '' || $form->{longitude} ne '') {

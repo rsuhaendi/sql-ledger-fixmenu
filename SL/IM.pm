@@ -960,9 +960,13 @@ sub import_vc {
       if ($newform->{db} eq 'customer') {
         for my $coord (qw(latitude longitude)) {
           if ($imported{$coord} && defined $newform->{$coord}) {
-            $newform->{$coord} =~ s/[°º\s]+//g;
-            $newform->{$coord} =~ s/,/./g;
-            $newform->{$coord} = '' unless $newform->{$coord} =~ /^-?\d+(?:\.\d+)?$/;
+            my $v = $newform->{$coord};
+            $v =~ s/^\s+|\s+$//g;
+            $v =~ s/,/./g;
+            $v =~ s/[^0-9.+-]//g; # strip degree symbols, ?, etc.
+            # keep only first valid-looking signed decimal
+            if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
+            $newform->{$coord} = $v;
           }
         }
         if (($imported{latitude} || $imported{longitude}) && ($newform->{latitude} || $newform->{longitude})) {

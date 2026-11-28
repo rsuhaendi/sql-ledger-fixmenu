@@ -1273,7 +1273,10 @@ sub recurring_transactions {
  
   $query = qq|SELECT 'ar' AS module, 'ar' AS transaction, a.invoice, a.invnumber AS masterinvoice,
                  a.description, n.name, n.customernumber AS vcnumber,
-		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
+		 n.id AS name_id, a.amount,
+                 n.site, COALESCE(NULLIF(e.name, ''), ce.name) AS sales,
+                 ad.address1 AS address1, ad.address2 AS address2, ad.city AS city,
+                 ad.zipcode AS zipcode, ad.country AS country, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
 		 s.nextdate - current_date AS overdue, 'customer' AS vc,
 		 ex.exchangerate, a.curr,
@@ -1281,6 +1284,9 @@ sub recurring_transactions {
                  FROM recurring s
 		 JOIN ar a ON (a.id = s.id)
 		 JOIN customer n ON (n.id = a.customer_id)
+                 LEFT JOIN address ad ON (ad.trans_id = n.id)
+                 LEFT JOIN employee e ON (e.id = a.employee_id)
+                 LEFT JOIN employee ce ON (ce.id = n.employee_id)
                  LEFT JOIN recurringemail se ON (se.id = s.id)
                  LEFT JOIN recurringprint sp ON (sp.id = s.id)
 		 LEFT JOIN exchangerate ex ON
@@ -1290,7 +1296,10 @@ sub recurring_transactions {
 
                  SELECT 'ap' AS module, 'ap' AS transaction, a.invoice, a.invnumber AS masterinvoice,
 		 a.description, n.name, n.vendornumber AS vcnumber,
-		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
+		 n.id AS name_id, a.amount,
+                 '' AS site, COALESCE(NULLIF(e.name, ''), ce.name) AS sales,
+                 ad.address1 AS address1, ad.address2 AS address2, ad.city AS city,
+                 ad.zipcode AS zipcode, ad.country AS country, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
 		 s.nextdate - current_date AS overdue, 'vendor' AS vc,
 		 ex.exchangerate, a.curr,
@@ -1298,6 +1307,9 @@ sub recurring_transactions {
                  FROM recurring s
 		 JOIN ap a ON (a.id = s.id)
 		 JOIN vendor n ON (n.id = a.vendor_id)
+                 LEFT JOIN address ad ON (ad.trans_id = n.id)
+                 LEFT JOIN employee e ON (e.id = a.employee_id)
+                 LEFT JOIN employee ce ON (ce.id = n.employee_id)
                  LEFT JOIN recurringemail se ON (se.id = s.id)
                  LEFT JOIN recurringprint sp ON (sp.id = s.id)
 		 LEFT JOIN exchangerate ex ON
@@ -1308,6 +1320,8 @@ sub recurring_transactions {
                  SELECT 'gl' AS module, 'gl' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, '' AS name, '' AS vcnumber, 0 AS name_id,
 		 (SELECT SUM(ac.amount) FROM acc_trans ac WHERE ac.trans_id = a.id AND ac.amount > 0) AS amount,
+                 '' AS site, '' AS sales, '' AS address1, '' AS address2, '' AS city,
+                 '' AS zipcode, '' AS country,
                  s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
 		 s.nextdate - current_date AS overdue, '' AS vc,
@@ -1322,7 +1336,10 @@ sub recurring_transactions {
 
                  SELECT 'oe' AS module, 'so' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, n.name, n.customernumber AS vcnumber,
-		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
+		 n.id AS name_id, a.amount,
+                 n.site, COALESCE(NULLIF(e.name, ''), ce.name) AS sales,
+                 ad.address1 AS address1, ad.address2 AS address2, ad.city AS city,
+                 ad.zipcode AS zipcode, ad.country AS country, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
 		 s.nextdate - current_date AS overdue, 'customer' AS vc,
 		 ex.exchangerate, a.curr,
@@ -1330,6 +1347,9 @@ sub recurring_transactions {
                  FROM recurring s
 		 JOIN oe a ON (a.id = s.id)
 		 JOIN customer n ON (n.id = a.customer_id)
+                 LEFT JOIN address ad ON (ad.trans_id = n.id)
+                 LEFT JOIN employee e ON (e.id = a.employee_id)
+                 LEFT JOIN employee ce ON (ce.id = n.employee_id)
                  LEFT JOIN recurringemail se ON (se.id = s.id)
                  LEFT JOIN recurringprint sp ON (sp.id = s.id)
 		 LEFT JOIN exchangerate ex ON
@@ -1340,7 +1360,10 @@ sub recurring_transactions {
 
                  SELECT 'oe' AS module, 'po' AS transaction, FALSE AS invoice, '' AS masterinvoice,
 		 a.description, n.name, n.vendornumber AS vcnumber,
-		 n.id AS name_id, a.amount, s.*, se.formname AS recurringemail,
+		 n.id AS name_id, a.amount,
+                 '' AS site, COALESCE(NULLIF(e.name, ''), ce.name) AS sales,
+                 ad.address1 AS address1, ad.address2 AS address2, ad.city AS city,
+                 ad.zipcode AS zipcode, ad.country AS country, s.*, se.formname AS recurringemail,
                  sp.formname AS recurringprint,
 		 s.nextdate - current_date AS overdue, 'vendor' AS vc,
 		 ex.exchangerate, a.curr,
@@ -1348,6 +1371,9 @@ sub recurring_transactions {
                  FROM recurring s
 		 JOIN oe a ON (a.id = s.id)
 		 JOIN vendor n ON (n.id = a.vendor_id)
+                 LEFT JOIN address ad ON (ad.trans_id = n.id)
+                 LEFT JOIN employee e ON (e.id = a.employee_id)
+                 LEFT JOIN employee ce ON (ce.id = n.employee_id)
                  LEFT JOIN recurringemail se ON (se.id = s.id)
                  LEFT JOIN recurringprint sp ON (sp.id = s.id)
 		 LEFT JOIN exchangerate ex ON

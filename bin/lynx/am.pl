@@ -4338,7 +4338,7 @@ sub recurring_transactions {
   
   $form->sort_order();
   
-  my @column_index = qw(ndx masterinvoice reference description name vcnumber);
+  my @column_index = qw(ndx masterinvoice reference description name vcnumber address site sales);
   
   push @column_index, qw(nextdate enddate id amount curr repeat howmany recurringemail recurringprint);
 
@@ -4359,6 +4359,9 @@ sub recurring_transactions {
   $column_data{description} = "<th><a class=listheading href=$href&sort=description>".$locale->text('Description')."</th>";
   $column_data{name} = "<th nowrap><a class=listheading href=$href&sort=name>".$locale->text('Company Name')."</th>";
   $column_data{vcnumber} = "<th nowrap><a class=listheading href=$href&sort=vcnumber>".$locale->text('Company Number')."</th>";
+  $column_data{address} = "<th class=listheading nowrap>".$locale->text('Address')."</th>";
+  $column_data{site} = "<th class=listheading nowrap>".$locale->text('Site')."</th>";
+  $column_data{sales} = "<th class=listheading nowrap>".$locale->text('Salesperson')."</th>";
   $column_data{nextdate} = "<th><a class=listheading href=$href&sort=nextdate>".$locale->text('Next')."</a></th>";
   $column_data{enddate} = "<th><a class=listheading href=$href&sort=enddate>".$locale->text('Ends')."</a></th>";
   $column_data{amount} = "<th class=listheading>".$locale->text('Amount')."</th>";
@@ -4437,6 +4440,11 @@ print qq|
     foreach $ref (@{ $form->{transactions}{$transaction} }) {
 
       for (@column_index) { $column_data{$_} = "<td>$ref->{$_}</td>" }
+
+      my @address_parts = grep { $_ } @{$ref}{qw(address1 address2 city zipcode country)};
+      $column_data{address} = "<td nowrap>".join(', ', @address_parts)."</td>";
+      $column_data{site} = "<td nowrap>$ref->{site}&nbsp;</td>";
+      $column_data{sales} = "<td nowrap>$ref->{sales}&nbsp;</td>";
 
       for (qw(nextdate enddate)) { $column_data{$_} = "<td nowrap>$ref->{$_}</td>" }
       

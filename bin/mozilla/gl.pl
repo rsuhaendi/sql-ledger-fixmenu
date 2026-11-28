@@ -195,6 +195,8 @@ sub search {
   
   $form->all_departments(\%myconfig);
 
+  GL->all_accounts(\%myconfig, \%$form);
+
   # departments
   if (@{ $form->{all_department} }) {
     $form->{selectdepartment} = "\n";
@@ -210,6 +212,19 @@ sub search {
 	  .qq|
 	  </select></td>
 	</tr>
+|;
+  }
+
+  if (@{ $form->{all_accno} }) {
+    $form->{selectaccnofilter} = "\n";
+    for (@{ $form->{all_accno} }) { $form->{selectaccnofilter} .= qq|$_->{accno}--$_->{description}\n| }
+    $accountfilter = qq|
+      <tr>
+        <th align=right>|.$locale->text('Account').qq|</th>
+        <td><select name=accno>|.$form->select_option($form->{selectaccnofilter}, $form->{accno}, undef, 1).qq|</select>
+        <input type=hidden name=accnofrom value="$form->{accnofrom}">
+        <input type=hidden name=accnoto value="$form->{accnoto}"></td>
+      </tr>
 |;
   }
 
@@ -257,7 +272,7 @@ sub search {
   for (qw(transdate reference description debit credit splitledger)) { $form->{"l_$_"} = "checked" }
 
   @checked = qw(l_subtotal l_splitledger);
-  @input = qw(reference description name vcnumber lineitem notes source memo datefrom dateto month year accnofrom accnoto amountfrom amountto sort direction reportlogin);
+  @input = qw(reference description name vcnumber lineitem notes source memo datefrom dateto month year accno accnofrom accnoto amountfrom amountto sort direction reportlogin);
   for (qw(department)) {
     push @input, $_ if exists $form->{$_};
   }
@@ -366,10 +381,7 @@ sub search {
 	
 	$selectfrom
 	
-	<tr>
-	  <th align=right>|.$locale->text('Account').qq| >=</th>
-	  <td><input name=accnofrom> <b>|.$locale->text('Account').qq| <=</b> <input name=accnoto></td>
-	</tr>
+	$accountfilter
 	
 	<tr>
 	  <th align=right>|.$locale->text('Amount').qq| >=</th>
@@ -995,7 +1007,7 @@ sub transactions {
   if ($form->{year} && $form->{month}) {
     for (qw(datefrom dateto)) { delete $form->{$_} }
   }
-  $form->hide_form(qw(department reference description name vcnumber lineitem notes source memo datefrom dateto month year accnofrom accnoto amountfrom amountto interval category l_subtotal l_splitledger));
+  $form->hide_form(qw(department reference description name vcnumber lineitem notes source memo datefrom dateto month year accno accnofrom accnoto amountfrom amountto interval category l_subtotal l_splitledger));
   
   $form->hide_form(qw(callback path login report reportcode reportlogin column_index flds sort direction));
   

@@ -978,5 +978,30 @@ sub transaction {
 }
 
 
+sub all_accounts {
+  my ($self, $myconfig, $form) = @_;
+
+  my $dbh = $form->dbconnect($myconfig);
+
+  my $query = qq|SELECT c.accno, c.description,
+                  l.description AS translation
+                  FROM chart c
+                  LEFT JOIN translation l ON (l.trans_id = c.id AND l.language_code = '$myconfig->{countrycode}')
+                  WHERE c.charttype = 'A'
+                  AND c.closed = '0'
+                  ORDER by 1|;
+  my $sth = $dbh->prepare($query);
+  $sth->execute || $form->dberror($query);
+
+  while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
+    $ref->{description} = $ref->{translation} if $ref->{translation};
+    push @{ $form->{all_accno} }, $ref;
+  }
+  $sth->finish;
+
+  $dbh->disconnect;
+}
+
+
 1;
 

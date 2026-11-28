@@ -859,7 +859,7 @@ sub transactions {
                  $acc_trans_flds
                  FROM $table a
                  JOIN $form->{vc} vc ON (a.$form->{vc}_id = vc.id)
-                 JOIN address ad ON (ad.trans_id = vc.id)
+                 LEFT JOIN address ad ON (ad.trans_id = vc.id)
                  LEFT JOIN employee e ON (a.employee_id = e.id)
                  LEFT JOIN department d ON (a.department_id = d.id)
                  LEFT JOIN warehouse w ON (a.warehouse_id = w.id)

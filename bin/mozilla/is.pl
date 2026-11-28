@@ -1969,7 +1969,7 @@ sub list_names {
 
   for (@column_index) { $column_data{$_} = qq|\n<th nowrap><a class="listheading" href="$href&sort=$_">$column_data{$_}</a></th>| }
   
-  $column_data{ndx} = qq|<th class=listheading width=1%><input name="allbox" type="checkbox" class="checkbox" value="1" checked onChange="CheckAll();"></th>|;
+  $column_data{ndx} = qq|<th class=listheading width=1%><input name="allbox" type="checkbox" class="checkbox" value="1" $form->{allbox} onChange="CheckAll();"></th>|;
 
 
   $form->header;
@@ -2016,7 +2016,7 @@ sub list_names {
 
     for (@column_index) { $column_data{$_} = qq|<td>$ref->{$_}</td>| }
 
-    $column_data{ndx} = qq|<td><input name="ndx_$i" type="checkbox" class="checkbox" value="$ref->{id}" checked></td>|;
+    $column_data{ndx} = qq|<td><input name="ndx_$i" type="checkbox" class="checkbox" value="$ref->{id}"></td>|;
 
     for (@column_index) { print "\n$column_data{$_}" }
 

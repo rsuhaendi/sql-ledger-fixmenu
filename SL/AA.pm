@@ -1166,6 +1166,19 @@ sub get_name {
   
   # if no currency use defaultcurrency
   $form->{currency} = ($form->{currency}) ? $form->{currency} : $form->{defaultcurrency};
+
+  # A vendor/customer can keep a stale currency that is no longer configured
+  # (for example USD in an IDR-only database). The dropdown only lists
+  # configured currencies, so keep the form value in sync with it; otherwise
+  # the Exchange Rate field keeps appearing even though the form shows IDR.
+  if ($form->{currency} && $form->{currencies}) {
+    my %configured = map { $_ => 1 } split /:/, $form->{currencies};
+    if (! $configured{$form->{currency}}) {
+      my @currencies = split /:/, $form->{currencies};
+      $form->{currency} = $form->{defaultcurrency} || $currencies[0];
+    }
+  }
+
   if ($form->{transdate} && ($form->{currency} ne $form->{defaultcurrency})) {
     $form->{exchangerate} ||= $form->get_exchangerate($myconfig, $dbh, $form->{currency}, $form->{transdate});
   }

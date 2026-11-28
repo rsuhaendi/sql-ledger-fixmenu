@@ -155,6 +155,7 @@ Migrasi custom yang umum:
 - `Pg-upgrade-commission-salesperson-import.sql` - koreksi salesperson invoice import lama yang terisi user login.
 - `Pg-fix-import-dash-salesperson.sql` - hapus employee dummy `--` dari import customer lama dan kembalikan salesperson customer.
 - `Pg-fix-invoice-salesperson-from-customer.sql` - isi salesperson invoice kosong dari salesperson customer agar komisi terbaca.
+- `Pg-fix-vendor-currency-idr.sql` - samakan currency vendor lama dengan mata uang yang masih terkonfigurasi (menghilangkan Exchange Rate di AP).
 - `Pg-upgrade-customer-network-fields.sql` / `Pg-upgrade-customer-isp-status.sql` / `Pg-upgrade-contact-ktp.sql` / `Pg-upgrade-add-site.sql` / `Pg-upgrade-register-customer-sites.sql` - field customer/site sesuai kebutuhan.
 
 Contoh menjalankan:

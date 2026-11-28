@@ -1522,6 +1522,19 @@ sub all_names {
     }
   }
 
+  # Site and payment type only exist on customers.
+  if ($form->{vc} eq 'customer') {
+    if ($form->{site} ne "") {
+      $var = $form->like(lc $form->{site});
+      $where .= " AND lower(vc.site) LIKE '$var'";
+    }
+    if ($form->{billing_type} ne "") {
+      $var = $form->{billing_type};
+      $var =~ s/'/''/g;
+      $where .= " AND vc.billing_type = '$var'";
+    }
+  }
+
   for (qw(employee paymentmethod pricegroup business)) {
     if ($form->{$_}) {
       (undef, $var) = split /--/, $form->{$_};
@@ -1529,13 +1542,16 @@ sub all_names {
     }
   }
 
+  my $isp_columns = ($form->{vc} eq 'customer') ? ', vc.site, vc.billing_type' : '';
+
   $query = qq|SELECT vc.id, vc.name, vc.$form->{vc}number, vc.startdate,
               vc.enddate,
               ad.city, ad.state, ad.zipcode, ad.country,
               e.name AS employee,
               b.description AS business,
               pg.pricegroup,
-              pm.description AS paymentmethod,
+              pm.description AS paymentmethod
+	      $isp_columns,
               vc.curr
               FROM $form->{vc} vc
               JOIN address ad ON (ad.trans_id = vc.id)

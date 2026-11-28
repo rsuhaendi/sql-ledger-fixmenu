@@ -1608,14 +1608,16 @@ sub generate_invoices {
   
   AA->vc_links(\%myconfig, \%$form);
   
-  for (qw(name city startdate)) { $form->{"l_$_"} = "checked" }
+  for (qw(name site billing_type city startdate)) { $form->{"l_$_"} = "checked" }
 
   @checked = ();
   %radio = ();
-  @input = qw(name vcnumber city state zipcode country startdatefrom startdateto enddatefrom enddateto employee paymentmethod curr pricegroup business);
+  @input = qw(name vcnumber site billing_type city state zipcode country startdatefrom startdateto enddatefrom enddateto employee paymentmethod curr pricegroup business);
   
   $fldlabel{name} = $locale->text('Customer');
   $fldlabel{vcnumber} = $locale->text('Customer Number');
+  $fldlabel{site} = $locale->text('Site');
+  $fldlabel{billing_type} = $locale->text('Jenis Pembayaran');
   $fldlabel{city} = $locale->text('City');
   $fldlabel{state} = $locale->text('State/Province');
   $fldlabel{zipcode} = $locale->text('Zip/Postal Code');
@@ -1625,6 +1627,8 @@ sub generate_invoices {
   
   $i = 1;
   $includeinreport{name} = { ndx => $i++, sort => name, checkbox => 1, html => qq|<input name="l_name" class="checkbox" type="checkbox" value="Y" $form->{l_name}>|, label => $fldlabel{name} };
+  $includeinreport{site} = { ndx => $i++, sort => site, checkbox => 1, html => qq|<input name="l_site" class="checkbox" type="checkbox" value="Y" $form->{l_site}>|, label => $fldlabel{site} };
+  $includeinreport{billing_type} = { ndx => $i++, sort => billing_type, checkbox => 1, html => qq|<input name="l_billing_type" class="checkbox" type="checkbox" value="Y" $form->{l_billing_type}>|, label => $fldlabel{billing_type} };
   $includeinreport{vcnumber} = { ndx => $i++, sort => vcnumber, checkbox => 1, html => qq|<input name="l_vcnumber" class="checkbox" type="checkbox" value="Y" $form->{l_vcnumber}>|, label => $fldlabel{vcnumber} };
   $includeinreport{city} = { ndx => $i++, sort => city, checkbox => 1, html => qq|<input name="l_city" class="checkbox" type="checkbox" value="Y" $form->{l_city}>|, label => $fldlabel{city} };
   $includeinreport{state} = { ndx => $i++, sort => state, checkbox => 1, html => qq|<input name="l_state" class="checkbox" type="checkbox" value="Y" $form->{l_state}>|, label => $fldlabel{state} };
@@ -1632,6 +1636,29 @@ sub generate_invoices {
   $includeinreport{country} = { ndx => $i++, sort => country, checkbox => 1, html => qq|<input name="l_country" class="checkbox" type="checkbox" value="Y" $form->{l_country}>|, label => $fldlabel{country} };
   $includeinreport{startdate} = { ndx => $i++, sort => startdate, checkbox => 1, html => qq|<input name="l_startdate" class="checkbox" type="checkbox" value="Y" $form->{l_startdate}>|, label => $fldlabel{startdate} };
   $includeinreport{enddate} = { ndx => $i++, sort => enddate, checkbox => 1, html => qq|<input name="l_enddate" class="checkbox" type="checkbox" value="Y" $form->{l_enddate}>|, label => $fldlabel{enddate} };
+
+  $site = qq|
+        <tr>
+          <th align=right nowrap>$fldlabel{site}</th>
+          <td><input name="site" size="32" value="$form->{site}"></td>
+        </tr>
+|;
+
+  my $bt = $form->{billing_type} || '';
+  my $bt_blank = ($bt eq '') ? ' selected' : '';
+  my $bt_prepaid = ($bt eq 'Prabayar') ? ' selected' : '';
+  my $bt_postpaid = ($bt eq 'Pascabayar') ? ' selected' : '';
+
+  $billing_type = qq|
+        <tr>
+          <th align=right nowrap>$fldlabel{billing_type}</th>
+          <td><select name="billing_type">
+                <option value=""$bt_blank></option>
+                <option value="Prabayar"$bt_prepaid>Prabayar</option>
+                <option value="Pascabayar"$bt_postpaid>Pascabayar</option>
+              </select></td>
+        </tr>
+|;
   
   if (@{ $form->{all_report} }) {
     $form->{selectreportform} = "\n";
@@ -1779,6 +1806,8 @@ sub generate_invoices {
           <th align=right nowrap>$fldlabel{vcnumber}</th>
           <td><input name="vcnumber" size="32"></td>
         </tr>
+        $site
+        $billing_type
         <tr>
           <th align=right nowrap>$fldlabel{city}</th>
           <td><input name="city" size="32"></td>
@@ -1901,6 +1930,26 @@ sub list_names {
     chop $form->{column_index};
 
   }
+
+  # Saved report definitions predate Site/Jenis Pembayaran. Add the columns
+  # when they are requested on the form, directly after Customer.
+  my %shown_column = map { $_ => 1 } @column_index;
+  for my $new_column (qw(site billing_type)) {
+    next if $shown_column{$new_column};
+    next unless $form->{"l_$new_column"};
+
+    my $after = ($new_column eq 'site') ? 'name' : 'site';
+    my $pos = 0;
+    for my $idx (0 .. $#column_index) {
+      if ($column_index[$idx] eq $after) {
+        $pos = $idx + 1;
+        last;
+      }
+    }
+    splice @column_index, $pos, 0, $new_column;
+    $shown_column{$new_column} = 1;
+  }
+  $form->{column_index} = join ',', map { "$_=" } @column_index;
 
 
   $href = "$form->{script}?action=list_names";

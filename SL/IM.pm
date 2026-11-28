@@ -68,6 +68,12 @@ sub sales_invoice_links {
               FROM employee
 	      WHERE employeenumber = ?|;
   my $eth = $dbh->prepare($query) || $form->dberror($query);
+
+  # Some spreadsheets export the salesperson name instead of the number.
+  $query = qq|SELECT id, name
+              FROM employee
+	      WHERE name = ?|;
+  my $ethname = $dbh->prepare($query) || $form->dberror($query);
   
   # parts
   $query = qq|SELECT p.id, p.unit, p.description, c.accno
@@ -128,6 +134,13 @@ sub sales_invoice_links {
         $form->{"${_}_$i"} = $dl[$form->{$form->{type}}->{$_}{ndx}] if $form->{$form->{type}}->{$_}{ndx} >= 0;
       }
 
+      # Accept CSV dates in mm/dd/yyyy (or other common formats) even when the
+      # user's dateformat differs; Form::datediff/add_date rely on that format.
+      for my $df (qw(transdate duedate datepaid reqdate deliverydate)) {
+        next unless defined $form->{"${df}_$i"} && $form->{"${df}_$i"} ne '';
+        $form->{"${df}_$i"} = normalize_import_date_for_form($myconfig, $form->{"${df}_$i"});
+      }
+
       if ($sameinvoice ne "$dl[$form->{$form->{type}}->{invnumber}{ndx}]$dl[$form->{$form->{type}}->{customernumber}{ndx}]") {
 	
         $sameinvoice = "$dl[$form->{$form->{type}}->{invnumber}{ndx}]$dl[$form->{$form->{type}}->{customernumber}{ndx}]";
@@ -137,6 +150,12 @@ sub sales_invoice_links {
           $eth->execute("$dl[$form->{$form->{type}}->{employeenumber}{ndx}]");
           ($form->{"employee_id_$i"}, $form->{"employee_$i"}) = $eth->fetchrow_array;
           $eth->finish;
+        }
+
+        if (! $form->{"employee_id_$i"} && $form->{"employee_$i"}) {
+          $ethname->execute($form->{"employee_$i"});
+          ($form->{"employee_id_$i"}, $form->{"employee_$i"}) = $ethname->fetchrow_array;
+          $ethname->finish;
         }
 	
         $j = $i;
@@ -199,7 +218,15 @@ sub sales_invoice_links {
       $pth->execute("$dl[$form->{$form->{type}}->{partnumber}{ndx}]");
       
       $parts_id = 0;
+      $form->{"tax_$i"} = 0;
+      my $matched_parts_id;
       while ($ref = $pth->fetchrow_hashref(NAME_lc)) {
+        # A partnumber is not guaranteed to be unique.  Only use the first
+        # matching part; otherwise duplicate rows inflate the tax preview and
+        # can pick the wrong part id.
+        $matched_parts_id ||= $ref->{id};
+        next if $ref->{id} != $matched_parts_id;
+
         $form->{"parts_id_$i"} = $ref->{id};
         for (qw(unit description)) { $form->{"${_}_$i"} ||= $ref->{$_} }
         
@@ -281,6 +308,12 @@ sub order_links {
               FROM employee
 	      WHERE employeenumber = ?|;
   my $eth = $dbh->prepare($query) || $form->dberror($query);
+
+  # Some spreadsheets export the salesperson name instead of the number.
+  $query = qq|SELECT id, name
+              FROM employee
+	      WHERE name = ?|;
+  my $ethname = $dbh->prepare($query) || $form->dberror($query);
   
   # parts
   $query = qq|SELECT p.id, p.unit, p.description,
@@ -339,6 +372,13 @@ sub order_links {
         $form->{"${_}_$i"} = $dl[$form->{$form->{type}}->{$_}{ndx}] if $form->{$form->{type}}->{$_}{ndx} >= 0;
       }
 
+      # Accept CSV dates in mm/dd/yyyy (or other common formats) even when the
+      # user's dateformat differs; Form::datediff/add_date rely on that format.
+      for my $df (qw(transdate duedate datepaid reqdate deliverydate)) {
+        next unless defined $form->{"${df}_$i"} && $form->{"${df}_$i"} ne '';
+        $form->{"${df}_$i"} = normalize_import_date_for_form($myconfig, $form->{"${df}_$i"});
+      }
+
       if ($sameorder ne qq|$dl[$form->{$form->{type}}->{ordnumber}{ndx}]$dl[$form->{$form->{type}}->{"$form->{vc}number"}{ndx}]|) {
         
         $sameorder = qq|$dl[$form->{$form->{type}}->{ordnumber}{ndx}]$dl[$form->{$form->{type}}->{"$form->{vc}number"}{ndx}]|;
@@ -348,6 +388,12 @@ sub order_links {
           $eth->execute("$dl[$form->{$form->{type}}->{employeenumber}{ndx}]");
           ($form->{"employee_id_$i"}, $form->{"employee_$i"}) = $eth->fetchrow_array;
           $eth->finish;
+        }
+
+        if (! $form->{"employee_id_$i"} && $form->{"employee_$i"}) {
+          $ethname->execute($form->{"employee_$i"});
+          ($form->{"employee_id_$i"}, $form->{"employee_$i"}) = $ethname->fetchrow_array;
+          $ethname->finish;
         }
         
         $j = $i;
@@ -406,7 +452,15 @@ sub order_links {
 
       
       $parts_id = 0;
+      $form->{"tax_$i"} = 0;
+      my $matched_parts_id;
       while ($ref = $pth->fetchrow_hashref(NAME_lc)) {
+        # A partnumber is not guaranteed to be unique.  Only use the first
+        # matching part; otherwise duplicate rows inflate the tax preview and
+        # can pick the wrong part id.
+        $matched_parts_id ||= $ref->{id};
+        next if $ref->{id} != $matched_parts_id;
+
         $form->{"parts_id_$i"} = $ref->{id};
         for (qw(unit description)) { $form->{"${_}_$i"} ||= $ref->{$_} }
 
@@ -544,7 +598,7 @@ sub import_sales_invoice {
   for $j (@{$ndx}) {
     $sth->execute($j) || $form->dberror($query);
     while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-      $ref->{reportvariable} =~ s/_$j/_$i/;
+      $ref->{reportvariable} =~ s/_$j$/_$i/;
       $form->{$ref->{reportvariable}} = $ref->{reportvalue};
     }
     $sth->finish;
@@ -680,7 +734,7 @@ sub import_order {
   for $j (@{$ndx}) {
     $sth->execute($j) || $form->dberror($query);
     while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-      $ref->{reportvariable} =~ s/_$j/_$i/;
+      $ref->{reportvariable} =~ s/_$j$/_$i/;
       $form->{$ref->{reportvariable}} = $ref->{reportvalue};
     }
     $sth->finish;
@@ -2188,6 +2242,22 @@ sub charts_for_export {
 
 }
 
+
+sub normalize_import_date_for_form {
+  my ($myconfig, $d) = @_;
+
+  my $iso = normalize_import_date($myconfig, $d);
+  return '' unless $iso;
+
+  my ($y, $m, $dd) = split /-/, $iso;
+  my $fmt = $myconfig->{dateformat} || 'yyyy-mm-dd';
+  my $sep = ($fmt =~ /^dd/) ? '/' : (($fmt =~ /^mm/) ? '/' : '-');
+
+  return "$y-$m-$dd" if $fmt =~ /^yyyy/;
+  return "$m$sep$dd$sep$y" if $fmt =~ /^mm/;
+  return "$dd$sep$m$sep$y" if $fmt =~ /^dd/;
+  return "$y-$m-$dd";
+}
 
 sub normalize_import_date {
   my ($myconfig, $d) = @_;

@@ -917,9 +917,6 @@ sub import_vc {
       } elsif ($imported{taxaccounts}) {
         $newform->{taxaccounts} ||= '';
         for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
-      } elsif ($imported{taxaccounts}) {
-        $newform->{taxaccounts} ||= '';
-        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
       } elsif ($newform->{id}) {
         # Preserve existing taxes when not in import file
         $newform->{taxaccounts} = $oldform_tax unless defined $newform->{taxaccounts};

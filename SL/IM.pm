@@ -899,30 +899,48 @@ sub import_vc {
             my ($p1, $p2, $p3) = ($1, $2, $3);
             $p3 += 2000 if length($p3) == 2;
             my ($yy,$mm,$dd);
-            if ($myconfig->{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=($p1,$p2,$p3); }
-            elsif ($myconfig->{dateformat} =~ /^dd/) { ($dd,$mm,$yy)=($p1,$p2,$p3); }
-            else { ($yy,$mm,$dd)=($p1,$p2,$p3); }
-            $iso = sprintf('%04d-%02d-%02d', $yy, $mm, $dd) if $yy && $mm && $dd;
+            # Try user dateformat first, then common fallbacks (export may use mm/dd/yyyy)
+            my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyy-mm-dd');
+            my %seen;
+            for my $fmt (@fmts) {
+              next unless $fmt;
+              next if $seen{$fmt}++;
+              my ($ty,$tm,$td);
+              if ($fmt =~ /^mm/) { ($tm,$td,$ty)=($p1,$p2,$p3); }
+              elsif ($fmt =~ /^dd/) { ($td,$tm,$ty)=($p1,$p2,$p3); }
+              else { ($ty,$tm,$td)=($p1,$p2,$p3); }
+              next unless $ty && $tm && $td;
+              next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+              $iso = sprintf('%04d-%02d-%02d', $ty, $tm, $td);
+              last;
+            }
           } elsif ($d =~ /^\d+$/) {
             my $n = $d;
-            # pad short numeric dates (e.g. 90426 -> 090426)
             $n = sprintf('%06d', $n) if length($n) < 6;
             if (length($n) == 8) {
-              if ($myconfig->{dateformat} =~ /^yyyy/) {
-                $iso = sprintf('%04d-%02d-%02d', substr($n,0,4), substr($n,4,2), substr($n,6,2));
-              } elsif ($myconfig->{dateformat} =~ /^mm/) {
-                my $yy = substr($n,4,4); $yy += 2000 if length($yy)==2;
-                $iso = sprintf('%04d-%02d-%02d', $yy, substr($n,0,2), substr($n,2,2));
-              } else { # dd...
-                my $yy = substr($n,4,4); $yy += 2000 if length($yy)==2;
-                $iso = sprintf('%04d-%02d-%02d', $yy, substr($n,2,2), substr($n,0,2));
+              my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyy-mm-dd');
+              my %seen;
+              for my $fmt (@fmts) {
+                next unless $fmt; next if $seen{$fmt}++;
+                my ($ty,$tm,$td);
+                if ($fmt =~ /^yyyy/) { ($ty,$tm,$td)= (substr($n,0,4),substr($n,4,2),substr($n,6,2)); }
+                elsif ($fmt =~ /^mm/) { $ty=substr($n,4,4); ($tm,$td)= (substr($n,0,2),substr($n,2,2)); }
+                else { $ty=substr($n,4,4); ($td,$tm)= (substr($n,0,2),substr($n,2,2)); }
+                next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+                $iso = sprintf('%04d-%02d-%02d', $ty,$tm,$td); last;
               }
             } elsif (length($n) == 6) {
-              my ($yy,$mm,$dd);
-              if ($myconfig->{dateformat} =~ /^yy/) { ($yy,$mm,$dd)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
-              elsif ($myconfig->{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-              else { ($dd,$mm,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-              $iso = sprintf('%04d-%02d-%02d', $yy, $mm, $dd);
+              my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyymmdd');
+              my %seen;
+              for my $fmt (@fmts) {
+                next unless $fmt; next if $seen{$fmt}++;
+                my ($ty,$tm,$td);
+                if ($fmt =~ /^yy/) { ($ty,$tm,$td)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
+                elsif ($fmt =~ /^mm/) { ($tm,$td,$ty)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+                else { ($td,$tm,$ty)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+                next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+                $iso = sprintf('%04d-%02d-%02d', $ty,$tm,$td); last;
+              }
             }
           } else {
             my $tmp = $form->datetonum($myconfig, $d);

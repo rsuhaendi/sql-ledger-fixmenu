@@ -1831,6 +1831,45 @@ sub im_vc {
 
   $form->{reportcode} = "import_$form->{type}";
   IM->prepare_import_data(\%myconfig, \%$form);
+
+  # Normalize preview for dates/coords so user sees what will be imported
+  for $i (1 .. $form->{rowcount}) {
+    for my $df (qw(startdate enddate)) {
+      my $d = $form->{"${df}_$i"};
+      next unless defined $d && $d ne '';
+      $d =~ s/^\s+|\s+$//g;
+      my $iso = '';
+      if ($d =~ /^(\d{4})-(\d{2})-(\d{2})$/) { $iso = $d; }
+      elsif ($d =~ /^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$/) {
+        my ($p1,$p2,$p3)=($1,$2,$3); $p3 += 2000 if length($p3)==2;
+        my ($yy,$mm,$dd);
+        if ($myconfig{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=($p1,$p2,$p3); }
+        elsif ($myconfig{dateformat} =~ /^dd/) { ($dd,$mm,$yy)=($p1,$p2,$p3); }
+        else { ($yy,$mm,$dd)=($p1,$p2,$p3); }
+        $iso = sprintf('%04d-%02d-%02d',$yy,$mm,$dd) if $yy && $mm && $dd;
+      } elsif ($d =~ /^\d+$/) {
+        my $n=$d; $n=sprintf('%06d',$n) if length($n)<6;
+        if (length($n)==8) {
+          if ($myconfig{dateformat} =~ /^yyyy/) { $iso=sprintf('%04d-%02d-%02d',substr($n,0,4),substr($n,4,2),substr($n,6,2)); }
+          elsif ($myconfig{dateformat} =~ /^mm/) { my $yy=substr($n,4,4); $iso=sprintf('%04d-%02d-%02d',$yy,substr($n,0,2),substr($n,2,2)); }
+          else { my $yy=substr($n,4,4); $iso=sprintf('%04d-%02d-%02d',$yy,substr($n,2,2),substr($n,0,2)); }
+        } elsif (length($n)==6) {
+          my ($yy,$mm,$dd);
+          if ($myconfig{dateformat} =~ /^yy/) { ($yy,$mm,$dd)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
+          elsif ($myconfig{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+          else { ($dd,$mm,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+          $iso=sprintf('%04d-%02d-%02d',$yy,$mm,$dd);
+        }
+      }
+      $form->{"${df}_$i"} = $iso if $iso;
+    }
+    for my $c (qw(latitude longitude)) {
+      my $v = $form->{"${c}_$i"};
+      next unless defined $v && $v ne '';
+      $v =~ s/^\s+|\s+$//g; $v =~ s/,/./g; $v =~ s/[^0-9.+-]//g;
+      if ($v =~ /(-?\d+(?:\.\d+)?)/) { $form->{"${c}_$i"} = $1; } else { $form->{"${c}_$i"} = ''; }
+    }
+  }
   
   for $i (1 .. $form->{rowcount}) {
 

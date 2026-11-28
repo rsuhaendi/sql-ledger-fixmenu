@@ -291,6 +291,23 @@ sub save {
   my $bank_address_id;
   
   if ($form->{id} *= 1) {
+    # When an update does not specify a contact/address, reuse the existing
+    # primary row instead of inserting a new one on every save/import.
+    if (! $form->{contactid}) {
+      $query = qq|SELECT id FROM contact
+                  WHERE trans_id = $form->{id}
+                  ORDER BY id ASC LIMIT 1|;
+      ($form->{contactid}) = $dbh->selectrow_array($query);
+      $form->{contactid} *= 1;
+    }
+    if (! $form->{addressid}) {
+      $query = qq|SELECT id FROM address
+                  WHERE trans_id = $form->{id}
+                  ORDER BY id ASC LIMIT 1|;
+      ($form->{addressid}) = $dbh->selectrow_array($query);
+      $form->{addressid} *= 1;
+    }
+
     $query = qq|DELETE FROM $form->{db}tax
                 WHERE $form->{db}_id = $form->{id}|;
     $dbh->do($query) || $form->dberror($query);

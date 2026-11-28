@@ -117,7 +117,10 @@ sub sales_invoice_links {
   
   for (@d) {
 
+    next if /^\s*$/;
+
     @dl = &dataline($form);
+    next unless grep { defined($_) && $_ ne '' && $_ =~ /\S/ } @dl;
 
     if ($#dl) {
       $i++;
@@ -532,14 +535,14 @@ sub import_sales_invoice {
 
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	      AND reportvariable LIKE ?|;
+	      AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   # retrieve invoice
   my $i = 1;
   my $j;
   for $j (@{$ndx}) {
-    $sth->execute("%\\_$j") || $form->dberror($query);
+    $sth->execute($j) || $form->dberror($query);
     while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
       $ref->{reportvariable} =~ s/_$j/_$i/;
       $form->{$ref->{reportvariable}} = $ref->{reportvalue};
@@ -668,14 +671,14 @@ sub import_order {
 
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	            AND reportvariable LIKE ?|;
+	            AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   # retrieve order
   my $i = 1;
   my $j;
   for $j (@{$ndx}) {
-    $sth->execute("%\\_$j") || $form->dberror($query);
+    $sth->execute($j) || $form->dberror($query);
     while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
       $ref->{reportvariable} =~ s/_$j/_$i/;
       $form->{$ref->{reportvariable}} = $ref->{reportvalue};
@@ -782,7 +785,7 @@ sub import_vc {
 
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	      AND reportvariable LIKE ?|;
+	      AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   $query = qq|SELECT curr
@@ -791,7 +794,8 @@ sub import_vc {
   ($form->{defaultcurrency}) = $dbh->selectrow_array($query);
 
   $query = qq|SELECT id FROM $form->{type}
-              WHERE $form->{type}number = ?|;
+              WHERE lower(trim($form->{type}number)) = lower(?)
+              ORDER BY id ASC LIMIT 1|;
   my $cth = $dbh->prepare($query) || $form->dberror($query);
 
   my %link = ( business => { fld => description },
@@ -800,29 +804,58 @@ sub import_vc {
 	       employee => { fld => name }
 	     );
 
+  # Full list of available tax accounts for this ARAP
+  my $arap = ($form->{type} eq 'customer') ? 'AR' : 'AP';
+  my $taxquery = qq|SELECT DISTINCT c.accno
+                    FROM chart c
+                    JOIN tax t ON (t.chart_id = c.id)
+                    WHERE c.link LIKE '%${arap}_tax%'
+                    ORDER BY c.accno|;
+  my @taxlist = @{ $dbh->selectcol_arrayref($taxquery) || [] };
+  my $taxlist = join ' ', @taxlist;
+
+  $form->{import_mode} = 1;
   for my $i (1 .. $form->{rowcount}) {
-    if ($form->{"ndx_$i"}) {
+    next unless $form->{"ndx_$i"};
 
-      for (keys %$newform) { delete $newform->{$_} }
+    for (keys %$newform) { delete $newform->{$_} }
 
+    my $row_ok = eval {
       $new = 1;
       $newform->{db} = $form->{type};
+      $newform->{import_mode} = 1;
       my %imported;
       
-      $sth->execute("%\_$i");
+      $sth->execute($i);
       while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-        $ref->{reportvariable} =~ s/_\d+//;
+        $ref->{reportvariable} =~ s/_$i$//;
         $newform->{$ref->{reportvariable}} = $ref->{reportvalue};
         $imported{$ref->{reportvariable}} = 1;
       }
       $sth->finish;
 
       $newform->{curr} ||= $form->{defaultcurrency};
-      
-      if ($newform->{"$newform->{db}number"}) {
-        $cth->execute($newform->{"$newform->{db}number"});
+
+      # Trim customer/vendor number so trailing spaces from CSV still match
+      my $vcnumber = $newform->{"$newform->{db}number"};
+      $vcnumber = '' unless defined $vcnumber;
+      $vcnumber =~ s/^\s+|\s+$//g;
+      $newform->{"$newform->{db}number"} = $vcnumber;
+
+      if ($vcnumber ne '') {
+        $cth->execute($vcnumber);
         ($newform->{id}) = $cth->fetchrow_array;
         $cth->finish;
+      }
+
+      # If no number, fall back to exact name match to avoid duplicates
+      if (! $newform->{id} && $vcnumber eq '' && $newform->{name}) {
+        my $nm = $newform->{name};
+        $nm =~ s/^\s+|\s+$//g;
+        my $q = qq|SELECT id FROM $newform->{db}
+                   WHERE lower(trim(name)) = lower(|.$dbh->quote($nm).qq|)
+                   ORDER BY id ASC LIMIT 1|;
+        ($newform->{id}) = $dbh->selectrow_array($q);
       }
 
       if ($newform->{id}) {
@@ -833,20 +866,43 @@ sub import_vc {
         $oldform->{ARAP} = ($newform->{db} eq 'customer') ? 'AR' : 'AP';
         CT->create_links($myconfig, $oldform);
 
+        # Preserve the existing primary contact when fields are not in the CSV
+        my $oldcontact = ($oldform->{all_contact} && @{ $oldform->{all_contact} })
+                         ? $oldform->{all_contact}->[0] : undef;
+        if ($oldcontact) {
+          $newform->{contactid} ||= $oldcontact->{id};
+          for my $cf (qw(salutation firstname lastname contacttitle occupation
+                         mobile gender typeofcontact ktp)) {
+            next if $imported{$cf};
+            if (! defined $newform->{$cf} || $newform->{$cf} eq '') {
+              $newform->{$cf} = $oldcontact->{$cf};
+            }
+          }
+        }
+
         for my $k (keys %$oldform) {
           next if ref $oldform->{$k};
           next if $k =~ /^(login|path|script|action|nextsub|db|ARAP|id|addressid|contactid|status|orphaned|taxaccounts)$/;
           next if $imported{$k};
-          $newform->{$k} = $oldform->{$k} unless defined $newform->{$k};
+          if ($k eq 'discount' || $k eq 'cashdiscount') {
+            $newform->{$k} = $oldform->{$k} * 100 unless defined $newform->{$k};
+          } else {
+            $newform->{$k} = $oldform->{$k} unless defined $newform->{$k};
+          }
         }
         for (qw(addressid contactid)) {
           $newform->{$_} = $oldform->{$_} if !$imported{$_} && $oldform->{$_};
         }
-        $newform->{_oldform_taxaccounts} = $oldform->{taxaccounts};
-        $newform->{taxaccounts} = $oldform->{taxaccounts} if !$imported{taxaccounts} && !$imported{ppn_11} && !defined $newform->{taxaccounts};
+        my %old_tax;
+        for my $tk (keys %$oldform) {
+          if ($tk =~ /^tax_(.+)$/ && $tk !~ /_description$/) { $old_tax{$1} = 1 }
+        }
+        $newform->{_old_assigned_taxes} = \%old_tax;
       }
 
-      if ($newform->{employee}) {
+      if ($newform->{employee} && $newform->{employee} =~ /^.*--\d+$/) {
+        # already resolved (from existing record), keep as-is
+      } elsif ($newform->{employee}) {
         my $salesperson = $newform->{employee};
         $salesperson =~ s/^\s+//;
         $salesperson =~ s/\s+$//;
@@ -875,9 +931,12 @@ sub import_vc {
         my $v = $newform->{$_};
         $v = '' unless defined $v;
         $v =~ s/^\s+//; $v =~ s/\s+$//;
-        if ($v ne '') {
+        if ($v =~ /^.*--\d+$/) {
+          # already resolved (from existing record), keep as-is
+        } elsif ($v ne '') {
           $query = qq|SELECT id FROM $_
-                WHERE $link{$_}{fld} = |.$dbh->quote($v);
+                WHERE lower(trim($link{$_}{fld})) = lower(|.$dbh->quote($v).qq|)
+                ORDER BY id ASC LIMIT 1|;
           ($var) = $dbh->selectrow_array($query);
           $newform->{$_} = "--" . ($var || 0);
         } elsif (!$imported{$_}) {
@@ -887,121 +946,40 @@ sub import_vc {
         }
       }
 
-      # Normalize dates from CSV (ISO or configured format)
+      # Normalize dates from CSV (ISO, configured format, or common fallbacks)
       for my $df (qw(startdate enddate)) {
-        if ($imported{$df} && defined $newform->{$df} && $newform->{$df} ne '') {
-          my $d = $newform->{$df};
-          $d =~ s/^\s+//; $d =~ s/\s+$//;
-          my $iso = '';
-          if ($d =~ /^(\d{4})-(\d{2})-(\d{2})$/) {
-            $iso = $d;
-          } elsif ($d =~ /^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$/) {
-            my ($p1, $p2, $p3) = ($1, $2, $3);
-            $p3 += 2000 if length($p3) == 2;
-            my ($yy,$mm,$dd);
-            # Try user dateformat first, then common fallbacks (export may use mm/dd/yyyy)
-            my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyy-mm-dd');
-            my %seen;
-            for my $fmt (@fmts) {
-              next unless $fmt;
-              next if $seen{$fmt}++;
-              my ($ty,$tm,$td);
-              if ($fmt =~ /^mm/) { ($tm,$td,$ty)=($p1,$p2,$p3); }
-              elsif ($fmt =~ /^dd/) { ($td,$tm,$ty)=($p1,$p2,$p3); }
-              else { ($ty,$tm,$td)=($p1,$p2,$p3); }
-              next unless $ty && $tm && $td;
-              next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
-              $iso = sprintf('%04d-%02d-%02d', $ty, $tm, $td);
-              last;
-            }
-          } elsif ($d =~ /^\d+$/) {
-            my $n = $d;
-            $n = sprintf('%06d', $n) if length($n) < 6;
-            if (length($n) == 8) {
-              my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyy-mm-dd');
-              my %seen;
-              for my $fmt (@fmts) {
-                next unless $fmt; next if $seen{$fmt}++;
-                my ($ty,$tm,$td);
-                if ($fmt =~ /^yyyy/) { ($ty,$tm,$td)= (substr($n,0,4),substr($n,4,2),substr($n,6,2)); }
-                elsif ($fmt =~ /^mm/) { $ty=substr($n,4,4); ($tm,$td)= (substr($n,0,2),substr($n,2,2)); }
-                else { $ty=substr($n,4,4); ($td,$tm)= (substr($n,0,2),substr($n,2,2)); }
-                next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
-                $iso = sprintf('%04d-%02d-%02d', $ty,$tm,$td); last;
-              }
-            } elsif (length($n) == 6) {
-              my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy','dd/mm/yy','yyyymmdd');
-              my %seen;
-              for my $fmt (@fmts) {
-                next unless $fmt; next if $seen{$fmt}++;
-                my ($ty,$tm,$td);
-                if ($fmt =~ /^yy/) { ($ty,$tm,$td)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
-                elsif ($fmt =~ /^mm/) { ($tm,$td,$ty)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-                else { ($td,$tm,$ty)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-                next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
-                $iso = sprintf('%04d-%02d-%02d', $ty,$tm,$td); last;
-              }
-            }
-          } else {
-            my $tmp = $form->datetonum($myconfig, $d);
-            if ($tmp && $tmp =~ /^(\d{4})(\d{2})(\d{2})$/) {
-              $iso = "$1-$2-$3";
-            } elsif ($tmp) {
-              $iso = $tmp;
-            }
-          }
-          $newform->{$df} = $iso if $iso;
-        }
+        next unless $imported{$df} && defined $newform->{$df} && $newform->{$df} ne '';
+        $newform->{$df} = normalize_import_date($myconfig, $newform->{$df});
       }
 
-      # PPn 11% import/export column
-      my $oldform_tax = ($newform->{id}) ? $newform->{_oldform_taxaccounts} : '';
+      # Taxes: keep a full list of available tax accounts, but only set
+      # tax_* flags for taxes that were actually assigned/imported.
+      my %assigned_tax;
+      if ($imported{taxaccounts}) {
+        %assigned_tax = map { $_ => 1 } split / /, ($newform->{taxaccounts} || '');
+      } elsif ($newform->{id} && $newform->{_old_assigned_taxes}) {
+        %assigned_tax = %{ $newform->{_old_assigned_taxes} };
+      }
+
       if ($newform->{db} eq 'customer' && $imported{ppn_11}) {
         my $v = $newform->{ppn_11};
         $v = '' unless defined $v;
         $v =~ s/^\s+//; $v =~ s/\s+$//;
         my $on = ($v =~ /^(1|y|yes|true|t|on)$/i) ? 1 : 0;
-        my %tax = map { $_ => 1 } split / /, ($newform->{taxaccounts} || '');
-        if ($on) { $tax{'2310'} = 1; } else { delete $tax{'2310'}; }
-        $newform->{taxaccounts} = join ' ', sort keys %tax;
-        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
-      } elsif ($imported{taxaccounts}) {
-        $newform->{taxaccounts} ||= '';
-        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
-      } elsif ($newform->{id}) {
-        # Preserve existing taxes when not in import file
-        $newform->{taxaccounts} = $oldform_tax unless defined $newform->{taxaccounts};
-        for (split / /, ($newform->{taxaccounts} || '')) { $newform->{"tax_$_"} = 1 }
+        if ($on) { $assigned_tax{'2310'} = 1; } else { delete $assigned_tax{'2310'}; }
       }
+
+      $newform->{taxaccounts} = $taxlist;
+      for (split / /, $taxlist) { $newform->{"tax_$_"} = $assigned_tax{$_} ? 1 : 0; }
 
       # Coordinate split/normalize
       if ($newform->{db} eq 'customer') {
         for my $coord (qw(latitude longitude)) {
-          if ($imported{$coord} && defined $newform->{$coord}) {
-            my $v = $newform->{$coord};
-            $v =~ s/^\s+|\s+$//g;
-            my $orig = $v;
-            my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
-            # DMS: degrees/minutes/seconds, e.g. 6°58'13.88"S or 6 58 13.88 S
-            my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
-            if ($orig =~ /[NSEWnsew°º'"\x{00B0}\x{00BA}\x{2032}\x{2033}]/ && @nums >= 2) {
-              for (@nums) { s/,/./g; }
-              my $deg = abs($nums[0] || 0);
-              my $min = abs($nums[1] || 0);
-              my $sec = abs($nums[2] || 0);
-              my $dec = $deg + ($min / 60) + ($sec / 3600);
-              $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
-              $v = sprintf('%.8f', $dec);
-              $v =~ s/\.?0+$//;
-            } else {
-              $v =~ s/,/./g;
-              $v =~ s/[^0-9.+-]//g;
-              if ($v =~ /(-?\d+(?:\.\d+)?)/) { $v = $1; } else { $v = ''; }
-            }
-            $newform->{$coord} = $v;
-          }
+          next unless $imported{$coord} && defined $newform->{$coord};
+          $newform->{$coord} = normalize_coordinate($newform->{$coord});
         }
-        if (($imported{latitude} || $imported{longitude}) && ($newform->{latitude} || $newform->{longitude})) {
+
+      if (($imported{latitude} || $imported{longitude}) && ($newform->{latitude} || $newform->{longitude})) {
           $newform->{coordinate} = join(', ', grep { defined $_ && $_ ne '' } ($newform->{latitude}, $newform->{longitude}));
         } elsif ($imported{coordinate} && $newform->{coordinate}) {
           my $c = $newform->{coordinate};
@@ -1053,7 +1031,16 @@ sub import_vc {
         $form->{updated} .= qq|$newform->{"$newform->{db}number"}, $newform->{name}\n|;
       }
 
+      1;
+    };
+
+    if (! $row_ok) {
+      my $err = $@ || 'unknown error';
+      $err =~ s/\s+$//;
+      eval { $dbh->rollback };
+      $form->{failed} .= "Row $i: $err\n";
     }
+
     $i++;
   }
 
@@ -1092,7 +1079,7 @@ sub import_item {
   
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	      AND reportvariable LIKE ?|;
+	      AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   $query = qq|SELECT p.id, pg.partsgroup,
@@ -1207,9 +1194,9 @@ sub import_item {
       $new = 1;
       $newform->{item} = $form->{type};
 
-      $sth->execute("%\\_$i");
+      $sth->execute($i);
       while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-	$ref->{reportvariable} =~ s/_(\d+)//;
+	$ref->{reportvariable} =~ s/_(\d+)$//;
 	if ($1 == $i) {
 	  $newform->{$ref->{reportvariable}} = $ref->{reportvalue};
 	}
@@ -1421,7 +1408,7 @@ sub import_coa {
   
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	      AND reportvariable LIKE ?|;
+	      AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   $query = qq|SELECT id
@@ -1433,9 +1420,9 @@ sub import_coa {
 
     for (keys %$newform) { delete $newform->{$_} }
 
-    $sth->execute("%\\_$i");
+    $sth->execute($i);
     while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-      $ref->{reportvariable} =~ s/_(\d+)//;
+      $ref->{reportvariable} =~ s/_(\d+)$//;
       if ($1 == $i) {
 	$newform->{$ref->{reportvariable}} = $ref->{reportvalue};
       }
@@ -1488,7 +1475,7 @@ sub import_groups {
   
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	            AND reportvariable LIKE ?|;
+	            AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   $query = qq|SELECT id FROM partsgroup
@@ -1510,9 +1497,9 @@ sub import_groups {
 
       for (keys %$newform) { delete $newform->{$_} }
       
-      $sth->execute("%\\_$i");
+      $sth->execute($i);
       while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-        $ref->{reportvariable} =~ s/_\d+//;
+        $ref->{reportvariable} =~ s/_\Q$i\E$//;
         $newform->{$ref->{reportvariable}} = $ref->{reportvalue};
       }
       $sth->finish;
@@ -1571,7 +1558,7 @@ sub import_gl {
 
   $query = qq|SELECT * FROM reportvars
               WHERE reportid = $reportid
-	            AND reportvariable LIKE ?|;
+	            AND reportvariable ~ concat('_', CAST(? AS text), '\$')|;
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   
   $query = qq|SELECT curr
@@ -1618,10 +1605,10 @@ sub import_gl {
 
       }
       
-      $sth->execute("%\\_$i");
+      $sth->execute($i);
 
       while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
-        $ref->{reportvariable} =~ s/_\d+//;
+        $ref->{reportvariable} =~ s/_\Q$i\E$//;
         $newform->{"$ref->{reportvariable}_$j"} = $ref->{reportvalue};
       }
       $sth->finish;
@@ -1721,7 +1708,7 @@ sub prepare_import_data {
       for (keys %{$form->{$form->{type}}}) {
       	if ($form->{$form->{type}}->{$_}{ndx} >= 0) {
 	        $form->{"${_}_$i"} = $dl[$form->{$form->{type}}->{$_}{ndx}];
-          if ($form->{"${_}_$i"}) {
+          if (defined $form->{"${_}_$i"} && $form->{"${_}_$i"} ne '') {
             $rth->execute("${_}_$i", $form->{"${_}_$i"});
             $rth->finish;
           }
@@ -2139,8 +2126,16 @@ sub customers_for_export {
                           WHERE ctx.customer_id = c.id AND ch.accno = '2310'
                         ) THEN 1 ELSE 0 END AS ppn_11
                    FROM customer c
-                   JOIN contact ct ON (ct.trans_id = c.id)
-                   LEFT JOIN address ad ON (ad.trans_id = c.id)
+                   LEFT JOIN (
+                     SELECT DISTINCT ON (trans_id) *
+                     FROM contact
+                     ORDER BY trans_id, id
+                   ) ct ON (ct.trans_id = c.id)
+                   LEFT JOIN (
+                     SELECT DISTINCT ON (trans_id) *
+                     FROM address
+                     ORDER BY trans_id, id
+                   ) ad ON (ad.trans_id = c.id)
                    LEFT JOIN business b ON (c.business_id = b.id)
                    LEFT JOIN employee e ON (c.employee_id = e.id)
                    LEFT JOIN pricegroup g ON (c.pricegroup_id = g.id)
@@ -2194,5 +2189,130 @@ sub charts_for_export {
 }
 
 
-1;
+sub normalize_import_date {
+  my ($myconfig, $d) = @_;
 
+  return '' unless defined $d;
+  $d =~ s/^\s+|\s+$//g;
+  return '' if $d eq '';
+
+  # Already ISO (also accepts ISO datetime)
+  if ($d =~ /^(\d{4})-(\d{2})-(\d{2})/) {
+    my ($y,$m,$dd) = ($1,$2,$3);
+    return sprintf('%04d-%02d-%02d', $y, $m, $dd);
+  }
+
+  my @fmts = ($myconfig->{dateformat} || '', 'mm/dd/yy', 'dd/mm/yy');
+  my %seen;
+
+  if ($d =~ /^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$/) {
+    my ($p1,$p2,$p3) = ($1,$2,$3);
+    $p3 += ($p3 < 100) ? 2000 : 0;
+    for my $fmt (@fmts) {
+      next unless $fmt;
+      next if $seen{$fmt}++;
+      my ($ty,$tm,$td);
+      if ($fmt =~ /^mm/)      { ($tm,$td,$ty) = ($p1,$p2,$p3); }
+      elsif ($fmt =~ /^dd/)   { ($td,$tm,$ty) = ($p1,$p2,$p3); }
+      else                    { ($ty,$tm,$td) = ($p1,$p2,$p3); }
+      next unless $ty && $tm && $td;
+      next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+      return sprintf('%04d-%02d-%02d', $ty, $tm, $td);
+    }
+    return '';
+  }
+
+  if ($d =~ /^\d+$/) {
+    my $n = $d;
+    $n = sprintf('%06d', $n) if length($n) < 6;
+
+    if (length($n) == 8) {
+      for my $fmt (@fmts, 'yyyy-mm-dd') {
+        next unless $fmt;
+        next if $seen{$fmt}++;
+        my ($ty,$tm,$td);
+        if ($fmt =~ /^yyyy/)     { ($ty,$tm,$td) = (substr($n,0,4),substr($n,4,2),substr($n,6,2)); }
+        elsif ($fmt =~ /^mm/)    { $ty = substr($n,4,4); ($tm,$td) = (substr($n,0,2),substr($n,2,2)); }
+        else                     { $ty = substr($n,4,4); ($td,$tm) = (substr($n,0,2),substr($n,2,2)); }
+        next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+        return sprintf('%04d-%02d-%02d', $ty,$tm,$td);
+      }
+      return '';
+    }
+
+    if (length($n) == 6) {
+      # For compact 6-digit dates, mmddyy is the common export form.
+      for my $fmt (@fmts, 'yy/mm/dd') {
+        next unless $fmt;
+        next if $seen{$fmt}++;
+        next if $fmt =~ /^yyyy/;   # 6 digits cannot be yyyymmdd
+        my ($ty,$tm,$td);
+        if ($fmt =~ /^yy/)       { ($ty,$tm,$td) = ('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
+        elsif ($fmt =~ /^mm/)    { ($tm,$td,$ty) = (substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+        else                     { ($td,$tm,$ty) = (substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+        next if $tm < 1 || $tm > 12 || $td < 1 || $td > 31;
+        return sprintf('%04d-%02d-%02d', $ty,$tm,$td);
+      }
+      return '';
+    }
+  }
+
+  # Last resort: use the application parser
+  my $tmp = $myconfig->{_form} ? $myconfig->{_form}->datetonum($myconfig, $d) : '';
+  if ($tmp && $tmp =~ /^(\d{4})(\d{2})(\d{2})$/) {
+    return "$1-$2-$3";
+  }
+
+  return '';
+}
+
+
+sub normalize_coordinate {
+  my ($v) = @_;
+
+  return '' unless defined $v;
+  $v =~ s/^\s+|\s+$//g;
+  return '' if $v eq '';
+
+  my $orig = $v;
+  my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
+  my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
+
+  # DMS: 6°58'13.88"S / 6 58 13.88 S / 107º31'9.70"E
+  if ($orig =~ /[NSEWnsew\x{00B0}\x{00BA}\x{2032}\x{2033}'"]/ && @nums >= 2) {
+    for (@nums) { s/,/./g; }
+    my $deg = abs($nums[0] || 0);
+    my $min = abs($nums[1] || 0);
+    my $sec = abs($nums[2] || 0);
+    my $dec = $deg + ($min / 60) + ($sec / 3600);
+    $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
+    my $out = sprintf('%.8f', $dec);
+    $out =~ s/\.?0+$//;
+    return $out;
+  }
+
+  # Decimal: normalize separators. If multiple separators, treat as thousands grouping.
+  my $clean = $orig;
+  $clean =~ s/[NSEWnsew\s\x{00B0}\x{00BA}\x{2032}\x{2033}'"]//g;
+  my $neg = ($clean =~ /^-/ || $sign < 0) ? -1 : 1;
+  $clean =~ s/[+-]//g;
+  if ($clean =~ /[.,]/) {
+    my @parts = split /[.,]/, $clean;
+    if (@parts > 2) {
+      # ambiguous/thousands grouping: keep digits only
+      $clean = join('', @parts);
+    } elsif (@parts == 2) {
+      $clean = $parts[0] . '.' . $parts[1];
+    }
+  }
+  $clean =~ s/[^0-9.]//g;
+  if ($clean =~ /^(\d+(?:\.\d+)?)$/) {
+    my $out = sprintf('%.8f', $neg * $1);
+    $out =~ s/\.?0+$//;
+    return $out;
+  }
+  return '';
+}
+
+
+1;

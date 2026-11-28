@@ -355,6 +355,12 @@ sub hide_form {
 sub error {
   my ($self, $msg) = @_;
 
+  # During batch import, surface error as exception so one bad row
+  # does not abort the entire import with an HTML error page.
+  if ($self->{import_mode}) {
+    die "Import error: $msg\n";
+  }
+
   if ($ENV{HTTP_USER_AGENT}) {
     $self->{msg} = $msg;
     $self->{format} = "html";

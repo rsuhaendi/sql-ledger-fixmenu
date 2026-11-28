@@ -1268,53 +1268,102 @@ sub xmldata {
 
 
 sub xrefhdr {
-  
+
   $form->{delimiter} ||= ',';
- 
+  $form->{$form->{type}} = {};
+
   $i = 1;
+  $xrefhdr = 0;
+  my $mapped = 0;
 
   if ($form->{mapfile}) {
-    open(FH, "$templates/$myconfig{templates}/$form->{mapfile}/import.map") or $form->error($!);
+    my $mapfile = "$templates/$myconfig{templates}/$form->{mapfile}/import.map";
+    if (open(FH, $mapfile)) {
+      while (<FH>) {
+        next if /^(#|;|\s)/;
+        chomp;
 
-    while (<FH>) {
-      next if /^(#|;|\s)/;
-      chomp;
+        s/\s*(#|;).*//g;
+        s/^\s*(.*?)\s*$/$1/;
 
-      s/\s*(#|;).*//g;
-      s/^\s*(.*?)\s*$/$1/;
+        last if $xrefhdr && $_ =~ /^\[/;
 
-      last if $xrefhdr && $_ =~ /^\[/;
+        if (/^\[$form->{type}\]/) {
+          $xrefhdr = 1;
+          next;
+        }
 
-      if (/^\[$form->{type}\]/) {
-        $xrefhdr = 1;
-        next;
+        if ($xrefhdr) {
+          ($key, $value) = split /=/, $_;
+          @f = split /,/, $value;
+          $form->{$form->{type}}{$f[0]} = { field => $key, length => $f[1], ndx => $i++ };
+        }
       }
-
-      if ($xrefhdr) {
-        ($key, $value) = split /=/, $_;
-        @f = split /,/, $value;
-        $form->{$form->{type}}{$f[0]} = { field => $key, length => $f[1], ndx => $i++ };
-      }
+      delete $form->{$form->{type}}{''};
+      close FH;
+      $mapped = 1 if scalar(keys %{ $form->{$form->{type}} });
     }
-    delete $form->{$form->{type}}{''};
-    close FH;
-    
-  } else {
-    # get first line
-    $str = (split /\n/, $form->{data})[0];
-    chomp $str;
+  }
 
-    if ($form->{tabdelimited}) {
-      $form->{delimiter} = '\t';
-    } else {
-      if ($form->{stringsquoted}) {
-        $str =~ s/(^"|"$)//g;
-        $str =~ s/"$form->{delimiter}"/$form->{delimiter}/g;
-      }
-    }
-      
-    for (split /$form->{delimiter}/, $str) {
-      $form->{$form->{type}}{$_} = { field => $_, length => "", ndx => $i++ };
+  if (! $mapped) {
+    # Read the first line as a normal CSV header (handles quoted headers)
+    my $str = (split /\n/, $form->{data})[0];
+    $str = '' unless defined $str;
+    $str =~ s/\r$//;
+    $str =~ s/^\xEF\xBB\xBF//;
+
+    local $_ = $str;
+    my @hdr = IM::dataline($form);
+    shift @hdr;
+
+    my %alias = (
+      'language'           => 'language_code',
+      'customer'           => 'name',
+      'customer_number'    => 'customernumber',
+      'customer_no'        => 'customernumber',
+      'customerno'         => 'customernumber',
+      'customer_number'    => 'customernumber',
+      'vendor_number'      => 'vendornumber',
+      'vendor_no'          => 'vendornumber',
+      'e-mail'             => 'email',
+      'e_mail'             => 'email',
+      'tax_included'       => 'taxincluded',
+      'terms_net'          => 'terms',
+      'price_group'        => 'pricegroup',
+      'date_prepared'      => 'dateprepared',
+      'our_company_name'   => 'company',
+      'ppn'                => 'ppn_11',
+      'ppn_11%'            => 'ppn_11',
+      'ppn11'              => 'ppn_11',
+      'lat'                => 'latitude',
+      'lng'                => 'longitude',
+      'long'               => 'longitude',
+      'salesperson'        => 'employee',
+      'sales_person'       => 'employee',
+      'type_(company/person)' => 'typeofcontact',
+      'jenis_pembayaran'   => 'billing_type',
+      'no._ktp'            => 'ktp',
+      'no_ktp'             => 'ktp',
+      'lokasi_odp'         => 'odp_location',
+      'panjang_kabel'      => 'cable_length',
+      'jenis_perangkat'    => 'device_type',
+      'biaya_registrasi'   => 'registration_fee',
+      'biaya_bulanan'      => 'monthly_fee',
+      'bandwidth_(mbps)'   => 'bandwidth',
+      'ip_address'         => 'ip_address',
+      'pppoe_username'     => 'pppoe_username',
+      'pppoe_password'     => 'pppoe_password',
+    );
+
+    for my $h (@hdr) {
+      next unless defined $h;
+      $h =~ s/^\xEF\xBB\xBF//;
+      $h =~ s/^\s+|\s+$//g;
+      next if $h eq '';
+      $h = lc $h;
+      $h =~ s/\s+/_/g;
+      $h = $alias{$h} if $alias{$h};
+      $form->{$form->{type}}{$h} = { field => $h, length => "", ndx => $i++ };
     }
   }
 
@@ -1760,6 +1809,20 @@ sub im_vc {
   $column_data{latitude} = $locale->text('Latitude');
   $column_data{longitude} = $locale->text('Longitude');
   $column_data{ppn_11} = $locale->text('PPN 11%');
+  $column_data{billing_type} = $locale->text('Jenis Pembayaran');
+  $column_data{ktp} = $locale->text('No. KTP');
+  $column_data{odp_location} = $locale->text('Lokasi ODP');
+  $column_data{pon} = $locale->text('PON');
+  $column_data{cable_length} = $locale->text('Panjang Kabel');
+  $column_data{signal_dbm} = $locale->text('Sinyal Redaman (dBm)');
+  $column_data{device_type} = $locale->text('Jenis Perangkat');
+  $column_data{ip_address} = $locale->text('IP address');
+  $column_data{pppoe_username} = $locale->text('PPPoE username');
+  $column_data{pppoe_password} = $locale->text('PPPoE password');
+  $column_data{bandwidth} = $locale->text('Bandwidth (Mbps)');
+  $column_data{registration_fee} = $locale->text('Biaya Registrasi');
+  $column_data{monthly_fee} = $locale->text('Biaya Bulanan');
+  $column_data{isp_status} = $locale->text('Status');
 
   $column_data{arap_accno} = ($form->{type} eq 'customer') ? $locale->text('AR') : $locale->text('AP');
   
@@ -1837,51 +1900,16 @@ sub im_vc {
     for my $df (qw(startdate enddate)) {
       my $d = $form->{"${df}_$i"};
       next unless defined $d && $d ne '';
-      $d =~ s/^\s+|\s+$//g;
-      my $iso = '';
-      if ($d =~ /^(\d{4})-(\d{2})-(\d{2})$/) { $iso = $d; }
-      elsif ($d =~ /^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$/) {
-        my ($p1,$p2,$p3)=($1,$2,$3); $p3 += 2000 if length($p3)==2;
-        my ($yy,$mm,$dd);
-        if ($myconfig{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=($p1,$p2,$p3); }
-        elsif ($myconfig{dateformat} =~ /^dd/) { ($dd,$mm,$yy)=($p1,$p2,$p3); }
-        else { ($yy,$mm,$dd)=($p1,$p2,$p3); }
-        $iso = sprintf('%04d-%02d-%02d',$yy,$mm,$dd) if $yy && $mm && $dd;
-      } elsif ($d =~ /^\d+$/) {
-        my $n=$d; $n=sprintf('%06d',$n) if length($n)<6;
-        if (length($n)==8) {
-          if ($myconfig{dateformat} =~ /^yyyy/) { $iso=sprintf('%04d-%02d-%02d',substr($n,0,4),substr($n,4,2),substr($n,6,2)); }
-          elsif ($myconfig{dateformat} =~ /^mm/) { my $yy=substr($n,4,4); $iso=sprintf('%04d-%02d-%02d',$yy,substr($n,0,2),substr($n,2,2)); }
-          else { my $yy=substr($n,4,4); $iso=sprintf('%04d-%02d-%02d',$yy,substr($n,2,2),substr($n,0,2)); }
-        } elsif (length($n)==6) {
-          my ($yy,$mm,$dd);
-          if ($myconfig{dateformat} =~ /^yy/) { ($yy,$mm,$dd)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
-          elsif ($myconfig{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-          else { ($dd,$mm,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
-          $iso=sprintf('%04d-%02d-%02d',$yy,$mm,$dd);
-        }
-      }
-      $form->{"${df}_$i"} = $iso if $iso;
+      my $iso = IM::normalize_import_date(\%myconfig, $d);
+      $form->{"${df}_$i"} = $iso;
     }
     for my $c (qw(latitude longitude)) {
       my $v = $form->{"${c}_$i"};
       next unless defined $v && $v ne '';
-      $v =~ s/^\s+|\s+$//g;
-      my $orig = $v; my $sign = ($orig =~ /[SWsw]/) ? -1 : 1;
-      my @nums = ($orig =~ /(-?\d+(?:[.,]\d+)?)/g);
-      if ($orig =~ /[NSEWnsew°º'"\x{00B0}\x{00BA}\x{2032}\x{2033}]/ && @nums >= 2) {
-        for (@nums) { s/,/./g; }
-        my $dec = abs($nums[0]||0) + (abs($nums[1]||0)/60) + (abs($nums[2]||0)/3600);
-        $dec *= -1 if $sign < 0 || ($nums[0] && $nums[0] < 0);
-        $v = sprintf('%.8f', $dec); $v =~ s/\.?0+$//;
-        $form->{"${c}_$i"} = $v;
-      } else {
-        $v =~ s/,/./g; $v =~ s/[^0-9.+-]//g;
-        if ($v =~ /(-?\d+(?:\.\d+)?)/) { $form->{"${c}_$i"} = $1; } else { $form->{"${c}_$i"} = ''; }
-      }
+      $form->{"${c}_$i"} = IM::normalize_coordinate($v);
     }
   }
-  
+
   for $i (1 .. $form->{rowcount}) {
 
     $j++; $j %= 2;
@@ -1957,6 +1985,9 @@ sub import_vc {
   }
   if ($form->{updated}) {
     $form->info($locale->text('Updated').":\n$form->{updated}");
+  }
+  if ($form->{failed}) {
+    $form->info($locale->text('Failed').":\n$form->{failed}");
   }
 
   $form->info;
@@ -2983,54 +3014,42 @@ Content-Disposition: attachment; filename=$form->{filename}.$form->{filetype}\n\
 
 sub export_payments_csv {
   
-  @column_index = ();
+  my @cols = ();
   for (split /,/, $form->{column_index}) {
-    ($f, $n) = split /=/, $_;
-    $column_index{$f} = $n;
-    push @column_index, $f;
+    my ($f, $n) = split /=/, $_, 2;
+    next unless defined $f && $f ne '';
+    push @cols, $f;
   }
 
-  if ($form->{tabdelimited}) {
-    $form->{delimiter} = "\t";
-    for (@column_index) { $column_index{$_} = 1 }
-  }
-  
-  %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
-  $lf = $lf{$form->{linefeed}};
-  $lf ||= "\n";
+  my $delim = $form->{delimiter};
+  $delim = "," unless defined $delim && $delim ne '';
+  $delim = "\t" if $form->{tabdelimited};
 
-  # print header
-  $line = "";
+  my %lf = ( UNIX => "\n", MAC => "\r", DOS => "\r\n" );
+  my $lf = $lf{$form->{linefeed}} || "\n";
+
+  my $quote = $form->{stringsquoted};
+
   if ($form->{includeheader}) {
-    for (@column_index) {
-      if ($form->{tabdelimited}) {
-	$line .= qq|$_$form->{delimiter}|;
-      } else {
-	if ($form->{stringsquoted}) {
-	  $line .= qq|"$_"$form->{delimiter}|;
-	} else {
-	  $column_index{$_} = 1;
-	  $line .= qq|$_$form->{delimiter}|;
-	}
-      }
-    }
-    chop $line;
-    print OUT "$line$lf";
-  }
-  
-  for $i (1 .. $form->{rowcount}) {
-    $line = "";
-    for (@column_index) {
-      if ($column_index{$_}) {
-	$line .= qq|$form->{"${_}_$i"}$form->{delimiter}|;
-      } else {
-	$line .= qq|"$form->{"${_}_$i"}"$form->{delimiter}|;
-      }
-    }
-    chop $line;
-    print OUT "$line$lf";
+    print OUT join($delim, map { _csv_escape($_, $quote) } @cols) . $lf;
   }
 
+  for my $i (1 .. $form->{rowcount}) {
+    my @row = map { defined $form->{"${_}_$i"} ? $form->{"${_}_$i"} : '' } @cols;
+    print OUT join($delim, map { _csv_escape($_, $quote) } @row) . $lf;
+  }
+
+}
+
+
+sub _csv_escape {
+  my ($value, $quote) = @_;
+  $value = '' unless defined $value;
+  if ($quote) {
+    $value =~ s/"/""/g;
+    return qq|"$value"|;
+  }
+  return $value;
 }
 
 
@@ -3175,7 +3194,7 @@ sub export_customer_form {
     [terms            => 'Terms Net'],
     [taxincluded      => 'Tax Included'],
     [ppn_11           => 'PPN 11%'],
-    [language         => 'Language'],
+    [language_code    => 'Language'],
     [pricegroup       => 'Price Group'],
     [startdate        => 'Startdate'],
     [enddate          => 'Enddate'],
@@ -3205,6 +3224,11 @@ sub export_customer_form {
   );
 
   my %isp_field = map { $_->[0] => 1 } @isp_fields;
+
+  # Default: export all customer fields so re-import does not miss columns
+  for my $field (@fields, @isp_fields) {
+    $form->{"l_$field->[0]"} = "checked" unless defined $form->{"l_$field->[0]"};
+  }
 
   for my $field (@fields, @isp_fields) {
     my ($key, $label) = @$field;
@@ -3705,7 +3729,12 @@ sub export_customers {
 
     for (@column_index) {
       my $f = exists $ref->{$_} ? $ref->{$_} : $form->{$_};
-      $form->{"${_}_$i"} = $form->pad($f, $form->{"f_$column_index{$_}"}, $form->{"a_$column_index{$_}"}, $form->{"w_$column_index{$_}"});
+      $f = '' unless defined $f;
+      if ($form->{filetype} eq 'txt') {
+        $form->{"${_}_$i"} = $form->pad($f, $form->{"f_$column_index{$_}"}, $form->{"a_$column_index{$_}"}, $form->{"w_$column_index{$_}"});
+      } else {
+        $form->{"${_}_$i"} = $f;
+      }
     }
 
   }

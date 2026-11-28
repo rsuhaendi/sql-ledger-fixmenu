@@ -461,10 +461,13 @@ sub prepare_employee {
 
   HR->get_employee(\%myconfig, \%$form);
 
-  $form->{commission_amount} = $form->format_amount(\%myconfig, $form->{commission_amount}, ($form->{precision} || 2), '0');
+  my $precision = (defined $form->{precision} && $form->{precision} =~ /^\d+$/)
+    ? $form->{precision} : 2;
+
+  $form->{commission_amount} = $form->format_amount(\%myconfig, $form->{commission_amount}, $precision, '0');
   $form->{commission_deduction} = 0
     unless defined $form->{commission_deduction} && $form->{commission_deduction} ne '';
-  $form->{commission_deduction} = $form->format_amount(\%myconfig, $form->{commission_deduction}, 2, '0');
+  $form->{commission_deduction} = $form->format_amount(\%myconfig, $form->{commission_deduction}, $precision, '0');
 
   for (keys %$form) { $form->{$_} = $form->quote($form->{$_}) }
   
@@ -3292,16 +3295,19 @@ sub update_employee {
   $form->redo_rows(\@flds, \@f, $count, $form->{wage_rows});
   $form->{wage_rows} = $count;
 
+  my $precision = (defined $form->{precision} && $form->{precision} =~ /^\d+$/)
+    ? $form->{precision} : 2;
+
   $form->{commission_amount} = $form->format_amount(
     \%myconfig,
     $form->parse_amount(\%myconfig, $form->{commission_amount}),
-    ($form->{precision} || 2),
+    $precision,
     '0'
   );
   $form->{commission_deduction} = $form->format_amount(
     \%myconfig,
     $form->parse_amount(\%myconfig, $form->{commission_deduction}),
-    2,
+    $precision,
     '0'
   );
 

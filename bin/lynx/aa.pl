@@ -1684,9 +1684,15 @@ sub search {
 		<td nowrap><input name=open class=checkbox type=checkbox value=Y checked> |.$locale->text('Open').qq|</td>
 		<td nowrap><input name=closed class=checkbox type=checkbox value=Y> |.$locale->text('Closed').qq|</td>
 		<td nowrap><input name=onhold class=checkbox type=checkbox value=Y> |.$locale->text('On Hold').qq|</td>
-		<td nowrap><input name=scheduled class=checkbox type=checkbox value=Y> |.$locale->text('Scheduled').qq|</td>
 		<td nowrap><input name=paidlate class=checkbox type=checkbox value=Y> |.$locale->text('Paid Late').qq|</td>
 		<td nowrap><input name=paidearly class=checkbox type=checkbox value=Y> |.$locale->text('Paid Early').qq|</td>
+	      </tr>
+|;
+
+  # Kept separate from Open/Closed so it reads as a different kind of filter.
+  $scheduled = qq|
+	      <tr>
+		<td colspan=5 nowrap><input name=scheduled class=checkbox type=checkbox value=Y> |.$locale->text('Scheduled').qq| (|.$locale->text('Master Invoice').qq|)</td>
 	      </tr>
 |;
 
@@ -1841,6 +1847,7 @@ sub search {
 	  <td>
 	    <table width=100%>
 	      $openclosed
+	      $scheduled
 	      $summary
 |;
 
@@ -2032,41 +2039,42 @@ sub transactions {
     $option .= "\n<br>" if ($option);
     $option .= $locale->text('To')."&nbsp;".$locale->date(\%myconfig, $form->{transdateto}, 1);
   }
-  if ($form->{open}) {
-    $callback .= "&open=$form->{open}";
-    $href .= "&open=$form->{open}";
-    $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Open');
-  }
-  if ($form->{closed}) {
-    $callback .= "&closed=$form->{closed}";
-    $href .= "&closed=$form->{closed}";
-    $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Closed');
-  }
-  if ($form->{onhold}) {
-    $callback .= "&onhold=$form->{onhold}";
-    $href .= "&onhold=$form->{onhold}";
-    $option .= "\n<br>" if ($option);
-    $option .= $locale->text('On Hold');
-  }
   if ($form->{scheduled}) {
     $callback .= "&scheduled=$form->{scheduled}";
     $href .= "&scheduled=$form->{scheduled}";
     $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Scheduled');
-  }
-  if ($form->{paidlate}) {
-    $callback .= "&paidlate=$form->{paidlate}";
-    $href .= "&paidlate=$form->{paidlate}";
-    $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Paid Late');
-  }
-  if ($form->{paidearly}) {
-    $callback .= "&paidearly=$form->{paidearly}";
-    $href .= "&paidearly=$form->{paidearly}";
-    $option .= "\n<br>" if ($option);
-    $option .= $locale->text('Paid Early');
+    $option .= $locale->text('Scheduled')." (".$locale->text('Master Invoice').")";
+  } else {
+    if ($form->{open}) {
+      $callback .= "&open=$form->{open}";
+      $href .= "&open=$form->{open}";
+      $option .= "\n<br>" if ($option);
+      $option .= $locale->text('Open');
+    }
+    if ($form->{closed}) {
+      $callback .= "&closed=$form->{closed}";
+      $href .= "&closed=$form->{closed}";
+      $option .= "\n<br>" if ($option);
+      $option .= $locale->text('Closed');
+    }
+    if ($form->{onhold}) {
+      $callback .= "&onhold=$form->{onhold}";
+      $href .= "&onhold=$form->{onhold}";
+      $option .= "\n<br>" if ($option);
+      $option .= $locale->text('On Hold');
+    }
+    if ($form->{paidlate}) {
+      $callback .= "&paidlate=$form->{paidlate}";
+      $href .= "&paidlate=$form->{paidlate}";
+      $option .= "\n<br>" if ($option);
+      $option .= $locale->text('Paid Late');
+    }
+    if ($form->{paidearly}) {
+      $callback .= "&paidearly=$form->{paidearly}";
+      $href .= "&paidearly=$form->{paidearly}";
+      $option .= "\n<br>" if ($option);
+      $option .= $locale->text('Paid Early');
+    }
   }
 
 

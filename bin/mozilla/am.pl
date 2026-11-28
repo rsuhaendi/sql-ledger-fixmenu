@@ -4536,18 +4536,25 @@ print qq|
 
   my $amount_idx = 0;
   $amount_idx++ while $column_index[$amount_idx] ne 'amount';
-  my $total_before = $amount_idx;
-  my $total_after = $#column_index - $amount_idx;
-  my $total_label = $locale->text('Total');
-  my $total_text = $form->format_amount(\%myconfig, $total_amount, $form->{precision});
+  my $label_idx = 0;
+  $label_idx++ while $column_index[$label_idx] ne 'description';
 
   print qq|
         </tr>
-      <tr class=listheading>
-        <td colspan=$total_before>$total_label</td>
-        <td align=right nowrap>$total_text</td>
-        <td colspan=$total_after>&nbsp;</td>
+      <tr class=listtotal>
+|;
+
+  my @total_data = map { "<td>&nbsp;</td>" } @column_index;
+  $total_data[$label_idx] = "<th class=listtotal>".$locale->text('Total')."</th>";
+  $total_data[$amount_idx] = "<th class=listtotal align=right>".$form->format_amount(\%myconfig, $total_amount, $form->{precision}, "&nbsp;")."</th>";
+
+  for (@total_data) { print "\n$_" }
+
+  print qq|
       </tr>
+|;
+
+  print qq|
       </table>
     </td>
   </tr>

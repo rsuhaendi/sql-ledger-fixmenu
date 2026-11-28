@@ -1607,8 +1607,16 @@ sub generate_invoices {
   $form->{reportcode} = "generate_sales_invoices";
   
   AA->vc_links(\%myconfig, \%$form);
+
+  # Salesperson search/filter is available here too, same as on the invoice
+  # form. Only active sales employees are offered.
+  $form->all_employees(\%myconfig, undef, undef, 1);
+  if (@{ $form->{all_employee} }) {
+    $form->{selectemployee} = "\n";
+    for (@{ $form->{all_employee} }) { $form->{selectemployee} .= qq|$_->{name}--$_->{id}\n| }
+  }
   
-  for (qw(name site billing_type city startdate)) { $form->{"l_$_"} = "checked" }
+  for (qw(name site billing_type employee city startdate)) { $form->{"l_$_"} = "checked" }
 
   @checked = ();
   %radio = ();

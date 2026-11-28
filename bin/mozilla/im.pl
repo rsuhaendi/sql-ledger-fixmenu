@@ -1757,6 +1757,9 @@ sub im_vc {
   $column_data{curr} = $locale->text('Currency');
   $column_data{startdate} = $locale->text('Startdate');
   $column_data{enddate} = $locale->text('Enddate');
+  $column_data{latitude} = $locale->text('Latitude');
+  $column_data{longitude} = $locale->text('Longitude');
+  $column_data{ppn_11} = $locale->text('PPN 11%');
 
   $column_data{arap_accno} = ($form->{type} eq 'customer') ? $locale->text('AR') : $locale->text('AP');
   

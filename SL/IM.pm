@@ -1930,38 +1930,46 @@ sub dataline {
 
   my @dl = ();
   my $string = 0;
-  my $chr = "";
   my $m = 0;
 
-  chomp;
+  my $line = $_;
+  chomp $line;
+  $line =~ s/\r$//;
 
   if ($form->{tabdelimited}) {
-    @dl = split /\t/, $_;
+    @dl = split /\t/, $line, -1;
   } else {
+    my $delim = $form->{delimiter};
+    $delim = ',' unless defined $delim && $delim ne '';
     if ($form->{stringsquoted}) {
-      foreach $chr (split //, $_) {
-				if ($chr eq '"') {
-					if (! $string) {
-						$string = 1;
-						next;
-					}
-				}
-				if ($string) {
-					if ($chr eq '"') {
-						$string = 0;
-						next;
-					}
-				}
-				if ($chr eq $form->{delimiter}) {
-					if (! $string) {
-						$m++;
-						next;
-					}
-				}
-				$dl[$m] .= $chr;
+      my @chars = split //, $line;
+      my $i = 0;
+      $dl[0] = '';
+      while ($i <= $#chars) {
+        my $chr = $chars[$i];
+        if ($chr eq '"') {
+          if (! $string) {
+            $string = 1;
+            $i++; next;
+          }
+          # inside quoted field: "" is escaped quote
+          if ($i < $#chars && $chars[$i + 1] eq '"') {
+            $dl[$m] .= '"';
+            $i += 2; next;
+          }
+          $string = 0;
+          $i++; next;
+        }
+        if ($chr eq $delim && ! $string) {
+          $m++;
+          $dl[$m] = '';
+          $i++; next;
+        }
+        $dl[$m] .= $chr;
+        $i++;
       }
     } else {
-      @dl = split /$form->{delimiter}/, $_;
+      @dl = split /\Q$delim\E/, $line, -1;
     }
   }
 

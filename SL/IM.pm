@@ -1030,6 +1030,40 @@ sub import_vc {
         $newform->{employee} = "--$var";
       }
 
+      # Commission values belong to the salesperson. Carry them through the
+      # customer export/import so the employee setup stays in sync.
+      if ($newform->{db} eq 'customer'
+          && ($imported{commission_amount} || $imported{commission_deduction})) {
+        my $employee_id = 0;
+        if ($newform->{employee} && $newform->{employee} =~ /--(\d+)$/) {
+          $employee_id = $1;
+        } elsif ($var && $imported{employee}) {
+          $employee_id = $var;
+        }
+
+        if ($employee_id) {
+          my @sets;
+          my @values;
+          if ($imported{commission_amount}) {
+            my $v = normalize_import_amount($newform->{commission_amount});
+            $v = 0 unless defined $v;
+            push @sets, 'commission_amount = ?';
+            push @values, $v;
+          }
+          if ($imported{commission_deduction}) {
+            my $v = normalize_import_amount($newform->{commission_deduction});
+            $v = 0 unless defined $v && $v >= 0 && $v <= 100;
+            push @sets, 'commission_deduction = ?';
+            push @values, $v;
+          }
+          if (@sets) {
+            push @values, $employee_id;
+            my $uquery = 'UPDATE employee SET ' . join(', ', @sets) . ' WHERE id = ?';
+            $dbh->do($uquery, undef, @values) || $form->dberror($uquery);
+          }
+        }
+      }
+
       for (qw(business pricegroup paymentmethod)) {
         my $v = $newform->{$_};
         $v = '' unless defined $v;
@@ -2215,6 +2249,7 @@ sub customers_for_export {
 
   my $query = qq|SELECT c.*, b.description AS business,
                         e.name AS employee,
+                        e.commission_amount, e.commission_deduction,
                         g.pricegroup,
                         l.description AS language,
                         pm.description AS paymentmethod,
@@ -2249,9 +2284,15 @@ sub customers_for_export {
   my $sth = $dbh->prepare($query) || $form->dberror($query);
   $sth->execute || $form->dberror($query);
 
+  my $precision = (defined $form->{precision} && $form->{precision} =~ /^\d+$/)
+    ? $form->{precision} : 2;
+
   while (my $ref = $sth->fetchrow_hashref(NAME_lc)) {
     for (qw(address1 address2 city state zipcode country)) { $ref->{$_} ||= "" }
     $ref->{taxincluded} = ($ref->{taxincluded} =~ /^(t|true|1|y|yes)$/i) ? 1 : 0;
+    for (qw(commission_amount commission_deduction)) {
+      $ref->{$_} = $form->format_amount(\%myconfig, $ref->{$_}, $precision, '0');
+    }
     push @{ $form->{TR} }, $ref;
   }
 
@@ -2383,6 +2424,40 @@ sub normalize_import_date {
   }
 
   return '';
+}
+
+
+sub normalize_import_amount {
+  my ($value) = @_;
+
+  return undef unless defined $value;
+  $value =~ s/^\s+|\s+$//g;
+  return undef if $value eq '';
+
+  my $negative = ($value =~ s/^-//) ? 1 : 0;
+  my $has_dot = ($value =~ /\./) ? 1 : 0;
+  my $has_comma = ($value =~ /,/) ? 1 : 0;
+
+  if ($has_dot && $has_comma) {
+    if (rindex($value, ',') > rindex($value, '.')) {
+      $value =~ s/\.//g;
+      $value =~ s/,/./;
+    } else {
+      $value =~ s/,//g;
+    }
+  } elsif ($has_comma) {
+    my @parts = split /,/, $value;
+    if (@parts == 2 && $parts[1] =~ /^\d{1,2}$/) {
+      $value =~ s/,/./;
+    } else {
+      $value =~ s/,//g;
+    }
+  }
+
+  return undef unless $value =~ /^\d+(?:\.\d+)?$/;
+  my $amount = 0 + $value;
+  $amount *= -1 if $negative;
+  return $amount;
 }
 
 

@@ -1340,6 +1340,14 @@ sub xrefhdr {
       'long'               => 'longitude',
       'salesperson'        => 'employee',
       'sales_person'       => 'employee',
+      'commission'          => 'commission_amount',
+      'commission_amount'   => 'commission_amount',
+      'komisi'              => 'commission_amount',
+      'commission_deduct'   => 'commission_deduction',
+      'commission_deduction'=> 'commission_deduction',
+      'commission_deduction_(%)' => 'commission_deduction',
+      'deduction'           => 'commission_deduction',
+      'potongan_komisi'     => 'commission_deduction',
       'type_(company/person)' => 'typeofcontact',
       'jenis_pembayaran'   => 'billing_type',
       'no._ktp'            => 'ktp',
@@ -1801,6 +1809,8 @@ sub im_vc {
   $column_data{discount} = $locale->text('Discount');
   $column_data{creditlimit} = $locale->text('Credit Limit');
   $column_data{employee} = $locale->text('Salesperson');
+  $column_data{commission_amount} = $locale->text('Commission Amount');
+  $column_data{commission_deduction} = $locale->text('Commission Deduction');
   $column_data{language_code} = $locale->text('Language');
   $column_data{pricegroup} = $locale->text('Pricegroup');
   $column_data{curr} = $locale->text('Currency');
@@ -3205,6 +3215,8 @@ sub export_customer_form {
   my @isp_fields = (
     [billing_type     => 'Jenis Pembayaran'],
     [employee         => 'Salesperson'],
+    [commission_amount => 'Commission Amount'],
+    [commission_deduction => 'Commission Deduction (%)'],
     [site             => 'Site'],
     [ktp              => 'No. KTP'],
     [latitude         => 'Latitude'],

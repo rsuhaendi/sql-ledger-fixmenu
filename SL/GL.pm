@@ -614,7 +614,7 @@ sub transactions {
 		 $invoicejoin
 		 JOIN chart c ON (ac.chart_id = c.id)
 		 JOIN customer ct ON (a.customer_id = ct.id)
-		 JOIN address ad ON (ad.trans_id = ct.id)
+		 LEFT JOIN address ad ON (ad.trans_id = ct.id)
 		 LEFT JOIN department d ON (d.id = a.department_id)
 		 LEFT JOIN translation l ON (l.trans_id = c.id AND l.language_code = '$myconfig->{countrycode}')
 		 WHERE $arwhere
@@ -635,7 +635,7 @@ sub transactions {
 		 $invoicejoin
 		 JOIN chart c ON (ac.chart_id = c.id)
 		 JOIN vendor ct ON (a.vendor_id = ct.id)
-		 JOIN address ad ON (ad.trans_id = ct.id)
+		 LEFT JOIN address ad ON (ad.trans_id = ct.id)
 		 LEFT JOIN department d ON (d.id = a.department_id)
 		 LEFT JOIN translation l ON (l.trans_id = c.id AND l.language_code = '$myconfig->{countrycode}')
 		 WHERE $apwhere|;

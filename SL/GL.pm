@@ -370,22 +370,32 @@ sub transactions {
   my $gdescription = "''";
   my $invoicejoin;
   my $lineitem = "''";
+
+  my $itemdescription = qq|COALESCE(NULLIF(i.description, ''), NULLIF(a.description, ''),
+                          (SELECT i2.description FROM invoice i2
+                           WHERE i2.trans_id = ac.trans_id
+                           AND i2.description IS NOT NULL AND i2.description <> ''
+                           ORDER BY i2.id LIMIT 1),
+                          (SELECT ac2.memo FROM acc_trans ac2
+                           WHERE ac2.trans_id = ac.trans_id
+                           AND ac2.memo IS NOT NULL AND ac2.memo <> ''
+                           ORDER BY ac2.id, ac2.chart_id LIMIT 1))|;
  
   if ($form->{lineitem}) {
     $var = $form->like(lc $form->{lineitem});
     $glwhere .= " AND lower(ac.memo) LIKE '$var'";
-    $arwhere .= " AND lower(i.description) LIKE '$var'";
-    $apwhere .= " AND lower(i.description) LIKE '$var'";
+    $arwhere .= " AND lower($itemdescription) LIKE '$var'";
+    $apwhere .= " AND lower($itemdescription) LIKE '$var'";
 
     $gdescription = "ac.memo";
-    $lineitem = "i.description";
+    $lineitem = $itemdescription;
     $invoicejoin = qq|
 		 LEFT JOIN invoice i ON (i.id = ac.id)|;
   }
  
   if ($form->{l_lineitem}) {
     $gdescription = "ac.memo";
-    $lineitem = "i.description";
+    $lineitem = $itemdescription;
     $invoicejoin = qq|
                  LEFT JOIN invoice i ON (i.id = ac.id)|;
   }

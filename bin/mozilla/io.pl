@@ -370,10 +370,11 @@ sub display_row {
 	        <tr>
 		  <td colspan=$colspan>
 		    <b>$group</b>
-		    <select name="partsgroup_$i">|
+		    <select name="partsgroup_$i" onChange="javascript:document.main.submit()">|
 		    .$form->select_option($form->{selectpartsgroup}, undef, 1)
 		    .qq|</select>
-		    <input name="partsgroupcode_$i" size=10>
+		    <b>$groupcode</b>
+		    <input name="partsgroupcode_$i" size=10 title="$groupcode">
 		  </td>
 		</tr>
 |;

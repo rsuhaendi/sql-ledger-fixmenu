@@ -2555,7 +2555,10 @@ sub retrieve_item {
   my $ref;
   my $j;
  
-  if ($form->{"partsgroupcode_$i"} ne "") {
+  # The dropdown selection wins over the Code field. Otherwise a stale or
+  # wrongly typed code (for example the group name) would abort the lookup and
+  # make the selected group look like it produced no items.
+  if (($form->{"partsgroupcode_$i"} ne "") && ! $form->{"partsgroup_$i"}) {
     $var = $form->like(lc $form->{"partsgroupcode_$i"});
     $query = qq|SELECT partsgroup, id FROM partsgroup
                 WHERE lower(code) LIKE '$var'|;

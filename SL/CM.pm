@@ -224,6 +224,7 @@ sub report {
     LEFT JOIN address ad ON (ad.trans_id = e.id)
     LEFT JOIN customer cu ON (cu.id = a.customer_id)
     WHERE a.invoice = true
+      AND e.commission_amount > 0
       $where
     ORDER BY e.name, $datefield, a.invnumber
   |;

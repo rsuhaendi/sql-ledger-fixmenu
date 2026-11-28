@@ -152,6 +152,7 @@ Migrasi custom yang umum:
 - `Pg-upgrade-sales-commission.sql` - tabel/kolom commission dasar.
 - `Pg-upgrade-commission-payment.sql` - tabel `commission_payable` / payment commission.
 - `Pg-upgrade-commission-employee-deduction.sql` - kolom `employee.commission_deduction` (prospektif).
+- `Pg-upgrade-commission-salesperson-import.sql` - koreksi salesperson invoice import lama yang terisi user login.
 - `Pg-upgrade-customer-network-fields.sql` / `Pg-upgrade-customer-isp-status.sql` / `Pg-upgrade-contact-ktp.sql` / `Pg-upgrade-add-site.sql` / `Pg-upgrade-register-customer-sites.sql` - field customer/site sesuai kebutuhan.
 
 Contoh menjalankan:

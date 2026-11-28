@@ -4346,6 +4346,7 @@ sub recurring_transactions {
   my $master_count = 0;
   for (keys %{ $form->{transactions} }) { $master_count += @{ $form->{transactions}{$_} } }
   my $count_text = $master_count." ".$locale->text('Invoice');
+  my $total_amount = 0;
 
   my %column_data;
 
@@ -4501,6 +4502,7 @@ print qq|
       $column_data{repeat} = "<td align=right nowrap>$repeat</td>";
       $column_data{howmany} = "<td align=right nowrap>".$form->format_amount(\%myconfig, $ref->{howmany})."</td>";
       $column_data{amount} = "<td align=right nowrap>".$form->format_amount(\%myconfig, $ref->{amount}, $form->{precision})."</td>";
+      $total_amount += $ref->{amount};
       
       $column_data{recurringemail} = "<td nowrap>";
       @f = split /:/, $ref->{recurringemail};
@@ -4525,8 +4527,20 @@ print qq|
     }
   }
 
+  my $amount_idx = 0;
+  $amount_idx++ while $column_index[$amount_idx] ne 'amount';
+  my $total_before = $amount_idx;
+  my $total_after = $#column_index - $amount_idx;
+  my $total_label = $locale->text('Total');
+  my $total_text = $form->format_amount(\%myconfig, $total_amount, $form->{precision});
+
   print qq|
         </tr>
+      <tr class=listheading>
+        <td colspan=$total_before>$total_label</td>
+        <td align=right nowrap>$total_text</td>
+        <td colspan=$total_after>&nbsp;</td>
+      </tr>
       </table>
     </td>
   </tr>

@@ -31,7 +31,9 @@ sub employees {
   my $dbh = $form->dbconnect($myconfig);
   my $sth = $dbh->prepare(qq|
     SELECT id, name FROM employee
-    WHERE sales = '1' AND (enddate IS NULL OR enddate >= CURRENT_DATE)
+    WHERE sales = '1'
+      AND commission_amount > 0
+      AND (enddate IS NULL OR enddate >= CURRENT_DATE)
     ORDER BY name
   |) || $form->dberror(qq|SELECT id, name FROM employee|);
   $sth->execute;
@@ -177,6 +179,18 @@ sub report {
   my @employee = split /--/, ($form->{employee_id} || '');
   my $employee_id = $employee[-1] || '';
   $employee_id *= 1;
+
+  # Ignore stale/invalid selections (e.g. the "--" placeholder created by
+  # older customer imports) so an old form value cannot make the report empty.
+  if ($employee_id) {
+    my $valid = $dbh->selectrow_array(qq|
+      SELECT 1 FROM employee
+       WHERE id = $employee_id
+         AND sales = '1'
+         AND commission_amount > 0
+    |);
+    $employee_id = 0 unless $valid;
+  }
 
   my $datefield = 'COALESCE(a.datepaid, a.transdate)';
   my $where = '';

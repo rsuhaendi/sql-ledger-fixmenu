@@ -1003,6 +1003,30 @@ sub import_vc {
         $newform->{_old_assigned_taxes} = \%old_tax;
       }
 
+      # "--"/"--0" are placeholders from older exports for an empty
+      # salesperson, not real employee names. Never create an employee from
+      # them. If the record already has a valid salesperson, keep it.
+      if (defined $newform->{employee}) {
+        my $salesperson = $newform->{employee};
+        $salesperson =~ s/^\s+|\s+$//g;
+        if ($salesperson eq '' || $salesperson eq '--' || $salesperson =~ /^--0+$/) {
+          delete $newform->{employee};
+          delete $imported{employee};
+          if ($newform->{id}) {
+            my ($eid) = $dbh->selectrow_array(qq|
+              SELECT employee_id FROM $newform->{db} WHERE id = ?|,
+              undef, $newform->{id});
+            $eid *= 1;
+            if ($eid) {
+              my ($ok) = $dbh->selectrow_array(qq|SELECT 1 FROM employee WHERE id = $eid|);
+              $newform->{employee} = "--$eid" if $ok;
+            }
+          }
+        } else {
+          $newform->{employee} = $salesperson;
+        }
+      }
+
       if ($newform->{employee} && $newform->{employee} =~ /^.*--\d+$/) {
         # already resolved (from existing record), keep as-is
       } elsif ($newform->{employee}) {

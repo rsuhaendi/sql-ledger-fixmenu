@@ -3374,12 +3374,31 @@ sub create_lock {
               WHERE expires < '$expires'|;
   $dbh->do($query) || $self->dberror($query);
 
-  $expires = time + $myconfig->{timeout};
+  # Keep stale locks short even when a user has a long session timeout.
+  my $timeout = $myconfig->{timeout} || 1800;
+  $timeout = 1800 if $timeout > 1800;
+  my $newexpires = time + $timeout;
   
   if ($id) {
     $query = qq|SELECT id, login FROM semaphore
 		WHERE id = $id|;
     my ($readonly, $login) = $dbh->selectrow_array($query);
+
+    my $current_login = $self->{login} || '';
+    my ($current_base) = split /\@/, $current_login;
+    my $owner_login = defined $login ? $login : '';
+    my ($owner_base) = split /\@/, $owner_login;
+
+    # The lock owner (and admin) must be able to re-open their own record;
+    # otherwise the form becomes permanently read-only until the lock expires.
+    if ($readonly && ! $add
+        && ($owner_login eq $current_login
+            || ($owner_base ne '' && $owner_base eq $current_base)
+            || $current_base eq 'admin')) {
+      $query = qq|DELETE FROM semaphore WHERE id = $id|;
+      $dbh->do($query) || $self->dberror($query);
+      $readonly = 0;
+    }
 
     if ($readonly && ! $add) {
       $login =~ s/\@.*//;
@@ -3390,7 +3409,7 @@ sub create_lock {
       $self->{readonly} = 1;
     } else {
       $query = qq|INSERT INTO semaphore (id, login, module, expires)
-		  VALUES ($id, '$self->{login}', '$module', '$expires')|;
+		  VALUES ($id, '$self->{login}', '$module', '$newexpires')|;
       $dbh->do($query) || $self->dberror($query);
     }
   }

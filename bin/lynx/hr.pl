@@ -608,14 +608,6 @@ sub employee_header {
 		<th align=right>|.$locale->text('Sales').qq|</th>
 		<td><input name=sales class=checkbox type=checkbox value=1 $sales></td>
 	      </tr>
-	      <tr>
-		<th align=right>|.$locale->text('Commission Amount').qq|</th>
-		<td><input name=commission_amount size=20 value="|.$form->quote($form->{commission_amount}).qq|"></td>
-	      </tr>
-	      <tr>
-		<th align=right>|.$locale->text('Commission Deduction').qq| (%)</th>
-		<td><input name=commission_deduction size=20 value="|.$form->quote($form->{commission_deduction}).qq|"></td>
-	      </tr>
 |;
   } else {
     ($acsrole) = split /--/, $form->{acsrole};
@@ -654,6 +646,32 @@ sub employee_header {
     }
 
     $form->hide_form(qw(acsrole employeelogin sales tan employeepassword));
+  }
+
+  # Commission fields are needed by the sales commission setup, so expose
+  # them to any user allowed to edit employees, not just admin.
+  if ($form->{readonly}) {
+    $commission = qq|
+	  <tr>
+	    <th align=right>|.$locale->text('Commission Amount').qq|</th>
+	    <td>$form->{commission_amount}</td>
+	  </tr>
+	  <tr>
+	    <th align=right>|.$locale->text('Commission Deduction').qq| (%)</th>
+	    <td>$form->{commission_deduction}</td>
+	  </tr>
+|;
+  } else {
+    $commission = qq|
+	  <tr>
+	    <th align=right>|.$locale->text('Commission Amount').qq|</th>
+	    <td><input name=commission_amount size=20 value="|.$form->quote($form->{commission_amount}).qq|"></td>
+	  </tr>
+	  <tr>
+	    <th align=right>|.$locale->text('Commission Deduction').qq| (%)</th>
+	    <td><input name=commission_deduction size=20 value="|.$form->quote($form->{commission_deduction}).qq|"></td>
+	  </tr>
+|;
   }
 
   if ($form->{id} && $form->{lock_employeenumber}) {
@@ -717,6 +735,7 @@ sub employee_header {
 		<td><input name=email size=35 value="$form->{email}"></td>
 	      </tr>
 	      $login
+	      $commission
 	    </table>
 	  </td>
 	  <td>

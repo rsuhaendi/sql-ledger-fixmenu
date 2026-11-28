@@ -847,6 +847,28 @@ sub post_invoice {
   } elsif (! $form->{employee_id}) {
     ($form->{employee}, $form->{employee_id}) = $form->get_employee($dbh);
   }
+
+  # If there is still no salesperson (for example the logged-in user is not
+  # an employee), use the salesperson already assigned to the customer so the
+  # sales commission report can attribute the invoice correctly.
+  if (! $form->{employee_id}) {
+    my $vc_id = $form->{"$form->{vc}_id"} || $form->{customer_id} || 0;
+    $vc_id *= 1;
+    if ($vc_id) {
+      my ($eid, $ename) = $dbh->selectrow_array(qq|
+        SELECT e.id, e.name
+          FROM $form->{vc} vc
+          JOIN employee e ON (e.id = vc.employee_id)
+         WHERE vc.id = $vc_id
+           AND e.sales = '1'
+           AND e.commission_amount > 0
+      |);
+      if ($eid) {
+        $form->{employee_id} = $eid;
+        $form->{employee} = "$ename--$eid";
+      }
+    }
+  }
   
   for (qw(department warehouse)) {
     (undef, $form->{"${_}_id"}) = split(/--/, $form->{$_});
@@ -2732,14 +2754,14 @@ sub generate_invoice {
 
   if ($form->{employee}) {
     $query = qq|SELECT vc.name AS $form->{vc},
-                ad.city
+                ad.city, vc.employee_id AS salesperson_id
                 FROM $form->{vc} vc
                 JOIN address ad ON (ad.trans_id = vc.id)
                 WHERE vc.id = $form->{"$form->{vc}_id"}|;
   } else {
     $query = qq|SELECT vc.name AS $form->{vc},
                 ad.city,
-                e.name AS employee, vc.employee_id
+                e.name AS employee, vc.employee_id AS salesperson_id
                 FROM $form->{vc} vc
                 LEFT JOIN employee e ON (e.id = vc.employee_id)
                 JOIN address ad ON (ad.trans_id = vc.id)
@@ -2751,6 +2773,13 @@ sub generate_invoice {
   $ref = $sth->fetchrow_hashref(NAME_lc);
   for (keys %$ref) { $form->{$_} = $ref->{$_} }
   $sth->finish;
+
+  # Carry the id together with the name; otherwise post_invoice() would
+  # drop the salesperson and fall back to the logged-in user.
+  if ($ref->{salesperson_id} && $form->{employee} && $form->{employee} !~ /--\d+$/) {
+    $form->{employee} = "$form->{employee}--$ref->{salesperson_id}";
+  }
+  delete $form->{salesperson_id};
 
   # tax rate
   $query = qq|SELECT c.description, t.rate, t.taxnumber,

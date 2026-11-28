@@ -470,10 +470,39 @@ sub save {
 
   my $network_fields = '';
   if ($form->{db} eq 'customer') {
-    for my $f (qw(site coordinate odp_location pon cable_length signal_dbm
+    # Normalize latitude/longitude: accept degree symbol, comma decimal, spaces
+    for my $coord (qw(latitude longitude)) {
+      if (defined $form->{$coord} && $form->{$coord} ne '') {
+        $form->{$coord} =~ s/[°º\s]+//g;
+        $form->{$coord} =~ s/,/./g;
+        $form->{$coord} = '' unless $form->{$coord} =~ /^-?\d+(?:\.\d+)?$/;
+      } else {
+        $form->{$coord} = '';
+      }
+    }
+    # If lat/long provided, keep coordinate string in sync for compatibility
+    if ($form->{latitude} ne '' || $form->{longitude} ne '') {
+      $form->{coordinate} = join(', ', grep { $_ ne '' } ($form->{latitude}, $form->{longitude}));
+    } elsif (defined $form->{coordinate} && $form->{coordinate} ne '') {
+      my $c = $form->{coordinate};
+      $c =~ s/[°º]/ /g;
+      my @parts = split /[ ,]+/, $c;
+      @parts = grep { $_ ne '' } @parts;
+      if (@parts >= 2 && $parts[0] =~ /^-?\d+(?:\.\d+)?$/ && $parts[1] =~ /^-?\d+(?:\.\d+)?$/) {
+        $form->{latitude} = $parts[0] if $form->{latitude} eq '';
+        $form->{longitude} = $parts[1] if $form->{longitude} eq '';
+      }
+    }
+
+    for my $f (qw(site coordinate latitude longitude odp_location pon cable_length signal_dbm
                   device_type ip_address pppoe_username pppoe_password
                   bandwidth registration_fee monthly_fee billing_type isp_status)) {
-      $network_fields .= "              $f = ".$dbh->quote($form->{$f}).qq|,\n|;
+      my $val = $form->{$f};
+      if ($f eq 'latitude' || $f eq 'longitude') {
+        $network_fields .= "              $f = ".(($val eq '') ? 'NULL' : $dbh->quote($val)).qq|,\n|;
+      } else {
+        $network_fields .= "              $f = ".$dbh->quote($val).qq|,\n|;
+      }
     }
   }
 
@@ -765,13 +794,23 @@ sub search {
   
   ($form->{transdatefrom}, $form->{transdateto}) = $form->from_to($form->{year}, $form->{month}, $form->{interval}) if $form->{year} && $form->{month};
 
+  my $ppn_select = '';
+  if ($form->{db} eq 'customer') {
+    $ppn_select = qq|,
+		 CASE WHEN EXISTS (
+		   SELECT 1 FROM customertax ctx
+		   JOIN chart ch ON (ch.id = ctx.chart_id)
+		   WHERE ctx.customer_id = c.id AND ch.accno = '2310'
+		 ) THEN 1 ELSE 0 END AS ppn_11|;
+  }
+
   my $query = qq|SELECT c.*, b.description AS business,
                  e.name AS employee, g.pricegroup, l.description AS language,
 		 ad.address1, ad.address2, ad.city, ad.state, ad.zipcode,
 		 ad.country,
 		 pm.description AS paymentmethod,
 		 ct.salutation, ct.firstname, ct.lastname, ct.ktp,
-		 ct.occupation, ct.mobile, ct.gender, ct.typeofcontact
+		 ct.occupation, ct.mobile, ct.gender, ct.typeofcontact$ppn_select
                  FROM $form->{db} c
 	      JOIN contact ct ON (ct.trans_id = c.id)
 	      JOIN address ad ON (ad.trans_id = c.id)

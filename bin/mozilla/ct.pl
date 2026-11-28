@@ -466,7 +466,8 @@ sub include_in_report {
     push @isp, qq|<input name="l_employee" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_employee}> |.$locale->text('Salesperson');
     push @isp, qq|<input name="l_site" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_site}> |.$locale->text('Site');
     push @isp, qq|<input name="l_ktp" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()" $form->{l_ktp}> |.$locale->text('No. KTP');
-    push @isp, qq|<input name="l_coordinate" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Titik Koordinat');
+    push @isp, qq|<input name="l_latitude" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Latitude');
+    push @isp, qq|<input name="l_longitude" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Longitude');
     push @isp, qq|<input name="l_odp_location" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Lokasi ODP');
     push @isp, qq|<input name="l_pon" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('PON');
     push @isp, qq|<input name="l_cable_length" type=checkbox class="checkbox isp-check" value=Y onchange="SyncISPAll()"> |.$locale->text('Panjang Kabel');
@@ -869,12 +870,12 @@ sub list_names {
 	     notes, discount, terms, creditlimit, outstanding, availablecredit);
   push @columns, 'site' if $form->{db} eq 'customer';
   push @columns, 'billing_type' if $form->{db} eq 'customer';
-  push @columns, qw(coordinate odp_location pon cable_length signal_dbm
+  push @columns, qw(latitude longitude odp_location pon cable_length signal_dbm
                     device_type ip_address pppoe_username pppoe_password
                     bandwidth registration_fee monthly_fee isp_status) if $form->{db} eq 'customer';
 
   if ($form->{l_isp_all} eq 'Y') {
-    for (qw(billing_type employee site ktp coordinate odp_location pon cable_length
+    for (qw(billing_type employee site ktp latitude longitude odp_location pon cable_length
             signal_dbm device_type ip_address pppoe_username pppoe_password
             bandwidth registration_fee monthly_fee isp_status)) {
       $form->{"l_$_"} = 'Y';
@@ -1123,7 +1124,8 @@ sub list_names {
   $column_header{firstname} = qq|<th><a class=listheading href=$href&sort=contact>|.$locale->text('Contact').qq|</a></th>|;
   $column_header{lastname} = qq|<th>&nbsp;</th>|;
   $column_header{ktp} = qq|<th><a class=listheading href=$href&sort=ktp>|.$locale->text('No. KTP').qq|</a></th>|;
-  $column_header{coordinate} = qq|<th class=listheading>|.$locale->text('Titik Koordinat').qq|</th>|;
+  $column_header{latitude} = qq|<th class=listheading>|.$locale->text('Latitude').qq|</th>|;
+  $column_header{longitude} = qq|<th class=listheading>|.$locale->text('Longitude').qq|</th>|;
   $column_header{odp_location} = qq|<th class=listheading>|.$locale->text('Lokasi ODP').qq|</th>|;
   $column_header{pon} = qq|<th class=listheading>|.$locale->text('PON').qq|</th>|;
   $column_header{cable_length} = qq|<th class=listheading>|.$locale->text('Panjang Kabel').qq|</th>|;
@@ -2278,8 +2280,12 @@ sub form_header {
 		<td><input name=ktp size=35 maxlength=64 value="|.$form->quote($form->{ktp}).qq|"></td>
 	      </tr>
 	      <tr>
-		<th align=right nowrap>|.$locale->text('Titik Koordinat').qq|</th>
-		<td><input name=coordinate size=35 value="$form->{coordinate}"></td>
+		<th align=right nowrap>|.$locale->text('Latitude').qq|</th>
+		<td><input name=latitude size=35 value="$form->{latitude}" placeholder="-7.112233"></td>
+	      </tr>
+	      <tr>
+		<th align=right nowrap>|.$locale->text('Longitude').qq|</th>
+		<td><input name=longitude size=35 value="$form->{longitude}" placeholder="110.445566"></td>
 	      </tr>
 	      <tr>
 		<th align=right nowrap>|.$locale->text('Lokasi ODP').qq|</th>

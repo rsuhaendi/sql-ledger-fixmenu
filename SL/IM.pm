@@ -807,11 +807,13 @@ sub import_vc {
 
       $new = 1;
       $newform->{db} = $form->{type};
+      my %imported;
       
-      $sth->execute("%\\_$i");
+      $sth->execute("%\_$i");
       while ($ref = $sth->fetchrow_hashref(NAME_lc)) {
         $ref->{reportvariable} =~ s/_\d+//;
         $newform->{$ref->{reportvariable}} = $ref->{reportvalue};
+        $imported{$ref->{reportvariable}} = 1;
       }
       $sth->finish;
 
@@ -825,11 +827,23 @@ sub import_vc {
 
       if ($newform->{id}) {
         $new = 0;
-        for (qw(address contact)) {
-          $query = qq|SELECT id FROM $_
-                WHERE trans_id = $newform->{id}|;
-          ($newform->{"${_}id"}) = $dbh->selectrow_array($query);
+        my $oldform = new Form;
+        $oldform->{id} = $newform->{id};
+        $oldform->{db} = $newform->{db};
+        $oldform->{ARAP} = ($newform->{db} eq 'customer') ? 'AR' : 'AP';
+        CT->create_links($myconfig, $oldform);
+
+        for my $k (keys %$oldform) {
+          next if ref $oldform->{$k};
+          next if $k =~ /^(login|path|script|action|nextsub|db|ARAP|id|addressid|contactid|status|orphaned|taxaccounts)$/;
+          next if $imported{$k};
+          $newform->{$k} = $oldform->{$k} unless defined $newform->{$k};
         }
+        for (qw(addressid contactid)) {
+          $newform->{$_} = $oldform->{$_} if !$imported{$_} && $oldform->{$_};
+        }
+        $newform->{_oldform_taxaccounts} = $oldform->{taxaccounts};
+        $newform->{taxaccounts} = $oldform->{taxaccounts} if !$imported{taxaccounts} && !$imported{ppn_11} && !defined $newform->{taxaccounts};
       }
 
       if ($newform->{employee}) {
@@ -858,19 +872,88 @@ sub import_vc {
       }
 
       for (qw(business pricegroup paymentmethod)) {
-        $query = qq|SELECT id FROM $_
-              WHERE $link{$_}{fld} = '$newform->{$_}'|;
-        ($var) = $dbh->selectrow_array($query);
-        $newform->{$_} = "--$var";
+        my $v = $newform->{$_};
+        $v = '' unless defined $v;
+        $v =~ s/^\s+//; $v =~ s/\s+$//;
+        if ($v ne '') {
+          $query = qq|SELECT id FROM $_
+                WHERE $link{$_}{fld} = |.$dbh->quote($v);
+          ($var) = $dbh->selectrow_array($query);
+          $newform->{$_} = "--" . ($var || 0);
+        } elsif (!$imported{$_}) {
+          # keep merged/old value
+        } else {
+          $newform->{$_} = "--0";
+        }
       }
 
-      for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
+      # Normalize dates from CSV (ISO or configured format)
+      for my $df (qw(startdate enddate)) {
+        if ($imported{$df} && defined $newform->{$df} && $newform->{$df} ne '') {
+          my $d = $newform->{$df};
+          $d =~ s/^\s+//; $d =~ s/\s+$//;
+          if ($d =~ /^\d{4}-\d{2}-\d{2}$/) {
+            $newform->{$df} = $d;
+          } else {
+            my $tmp = $form->datetonum(\%myconfig, $d);
+            if ($tmp) {
+              $newform->{$df} = $tmp;
+            }
+          }
+        }
+      }
+
+      # PPn 11% import/export column
+      my $oldform_tax = ($newform->{id}) ? $newform->{_oldform_taxaccounts} : '';
+      if ($newform->{db} eq 'customer' && $imported{ppn_11}) {
+        my $v = $newform->{ppn_11};
+        $v = '' unless defined $v;
+        $v =~ s/^\s+//; $v =~ s/\s+$//;
+        my $on = ($v =~ /^(1|y|yes|true|t|on)$/i) ? 1 : 0;
+        my %tax = map { $_ => 1 } split / /, ($newform->{taxaccounts} || '');
+        if ($on) { $tax{'2310'} = 1; } else { delete $tax{'2310'}; }
+        $newform->{taxaccounts} = join ' ', sort keys %tax;
+        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
+      } elsif ($imported{taxaccounts}) {
+        $newform->{taxaccounts} ||= '';
+        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
+      } elsif ($imported{taxaccounts}) {
+        $newform->{taxaccounts} ||= '';
+        for (split / /, $newform->{taxaccounts}) { $newform->{"tax_$_"} = 1 }
+      } elsif ($newform->{id}) {
+        # Preserve existing taxes when not in import file
+        $newform->{taxaccounts} = $oldform_tax unless defined $newform->{taxaccounts};
+        for (split / /, ($newform->{taxaccounts} || '')) { $newform->{"tax_$_"} = 1 }
+      }
+
+      # Coordinate split/normalize
+      if ($newform->{db} eq 'customer') {
+        for my $coord (qw(latitude longitude)) {
+          if ($imported{$coord} && defined $newform->{$coord}) {
+            $newform->{$coord} =~ s/[°º\s]+//g;
+            $newform->{$coord} =~ s/,/./g;
+            $newform->{$coord} = '' unless $newform->{$coord} =~ /^-?\d+(?:\.\d+)?$/;
+          }
+        }
+        if (($imported{latitude} || $imported{longitude}) && ($newform->{latitude} || $newform->{longitude})) {
+          $newform->{coordinate} = join(', ', grep { defined $_ && $_ ne '' } ($newform->{latitude}, $newform->{longitude}));
+        } elsif ($imported{coordinate} && $newform->{coordinate}) {
+          my $c = $newform->{coordinate};
+          $c =~ s/[°º]/ /g;
+          my @parts = split /[ ,]+/, $c;
+          @parts = grep { $_ ne '' } @parts;
+          if (@parts >= 2 && $parts[0] =~ /^-?\d+(?:\.\d+)?$/ && $parts[1] =~ /^-?\d+(?:\.\d+)?$/) {
+            $newform->{latitude} = $parts[0] if !$imported{latitude};
+            $newform->{longitude} = $parts[1] if !$imported{longitude};
+          }
+        }
+      }
 
       # Data lama hasil export sering hanya punya customer.name untuk pelanggan
       # bertipe Person. Isi First/Last Name agar nama tetap tampil di Edit Customer
       # tanpa mengubah logika form bawaan dan tanpa mengganti tipe menjadi Company.
       if ($newform->{db} eq 'customer'
-          && $newform->{typeofcontact} ne 'company'
+          && ($newform->{typeofcontact} || '') ne 'company'
           && $newform->{name}
           && !$newform->{firstname} && !$newform->{lastname}) {
         my @parts = split /\s+/, $newform->{name};
@@ -1975,7 +2058,12 @@ sub customers_for_export {
                         ad.zipcode, ad.country,
                         ct.salutation, ct.firstname, ct.lastname, ct.ktp,
                         ct.occupation, ct.mobile, ct.gender,
-                        COALESCE(NULLIF(ct.typeofcontact, ''), 'person') AS typeofcontact
+                        COALESCE(NULLIF(ct.typeofcontact, ''), 'person') AS typeofcontact,
+                        CASE WHEN EXISTS (
+                          SELECT 1 FROM customertax ctx
+                          JOIN chart ch ON (ch.id = ctx.chart_id)
+                          WHERE ctx.customer_id = c.id AND ch.accno = '2310'
+                        ) THEN 1 ELSE 0 END AS ppn_11
                    FROM customer c
                    JOIN contact ct ON (ct.trans_id = c.id)
                    LEFT JOIN address ad ON (ad.trans_id = c.id)

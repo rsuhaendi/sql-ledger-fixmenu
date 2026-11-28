@@ -4450,7 +4450,6 @@ print qq|
       }
 
       $column_data{ndx} = qq|<td></td>|;
-      $column_data{masterinvoice} = "<td nowrap>".($ref->{masterinvoice} || "&nbsp;")."</td>";
       
       if (!$ref->{expired}) {
 	$k++;
@@ -4488,6 +4487,8 @@ print qq|
 
       $column_data{vcnumber} = qq|<td>$ref->{vcnumber}&nbsp;</td>|;
       $column_data{id} = qq|<td><a href=$module?action=edit&id=$ref->{id}&vc=$ref->{vc}&path=$form->{path}&login=$form->{login}&type=$type&callback=$callback>$ref->{id}</a></td>|;
+      my $master_label = $ref->{masterinvoice} || $ref->{id};
+      $column_data{masterinvoice} = qq|<td nowrap><a href=$module?action=edit&id=$ref->{id}&vc=$ref->{vc}&path=$form->{path}&login=$form->{login}&type=$type&callback=$callback>$master_label</a></td>|;
       
       $column_data{repeat} = "<td align=right nowrap>$repeat</td>";
       $column_data{howmany} = "<td align=right nowrap>".$form->format_amount(\%myconfig, $ref->{howmany})."</td>";

@@ -3236,9 +3236,12 @@ sub export_customer_form {
 
   my %isp_field = map { $_->[0] => 1 } @isp_fields;
 
-  # Default: export all customer fields so re-import does not miss columns
+  # Default: export all customer fields so re-import does not miss columns,
+  # except metadata that is not needed for the customer data itself.
   for my $field (@fields, @isp_fields) {
-    $form->{"l_$field->[0]"} = "checked" unless defined $form->{"l_$field->[0]"};
+    my $key = $field->[0];
+    next if $key eq 'dateprepared';
+    $form->{"l_$key"} = "checked" unless defined $form->{"l_$key"};
   }
 
   for my $field (@fields, @isp_fields) {

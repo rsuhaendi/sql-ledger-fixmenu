@@ -1632,7 +1632,7 @@ sub generate_invoices {
         <tr>
           <th align=right nowrap>$fldlabel{billing_type}</th>
           <td><select name="billing_type">
-                <option value=""$bt_blank></option>
+                <option value=""$bt_blank>|.$locale->text('All').qq|</option>
                 <option value="Prabayar"$bt_prepaid>Prabayar</option>
                 <option value="Pascabayar"$bt_postpaid>Pascabayar</option>
               </select></td>

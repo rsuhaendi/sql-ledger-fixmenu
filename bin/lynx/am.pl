@@ -4338,7 +4338,7 @@ sub recurring_transactions {
   
   $form->sort_order();
   
-  my @column_index = qw(ndx masterinvoice reference description name vcnumber address site sales);
+  my @column_index = qw(ndx masterinvoice reference description vcnumber name address site sales);
   
   push @column_index, qw(nextdate enddate id amount curr repeat howmany recurringemail recurringprint);
 
@@ -4352,16 +4352,16 @@ sub recurring_transactions {
   $form->{allbox} = ($form->{allbox}) ? "checked" : "";
   $action = ($form->{deselect}) ? "deselect_all" : "select_all";
   $column_data{ndx} = qq|<th class=listheading width=1%><input name="allbox" type=checkbox class=checkbox value="1" $form->{allbox} onChange="CheckAll(); javascript:document.main.submit()"><input type=hidden name=action value="$action"></th>|;
-  $column_data{masterinvoice} = "<th class=listheading nowrap>".$locale->text('Master Invoice')."</th>";
+  $column_data{masterinvoice} = "<th class=listheading nowrap>Master Inv</th>";
   
   $column_data{reference} = "<th><a class=listheading href=$href&sort=reference>".$locale->text('Reference').qq"</a></th>";
   $column_data{id} = "<th class=listheading>".$locale->text('ID')."</th>";
   $column_data{description} = "<th><a class=listheading href=$href&sort=description>".$locale->text('Description')."</th>";
   $column_data{name} = "<th nowrap><a class=listheading href=$href&sort=name>".$locale->text('Company Name')."</th>";
-  $column_data{vcnumber} = "<th nowrap><a class=listheading href=$href&sort=vcnumber>".$locale->text('Company Number')."</th>";
+  $column_data{vcnumber} = "<th nowrap><a class=listheading href=$href&sort=vcnumber>Company Num</a></th>";
   $column_data{address} = "<th class=listheading nowrap>".$locale->text('Address')."</th>";
   $column_data{site} = "<th class=listheading nowrap>".$locale->text('Site')."</th>";
-  $column_data{sales} = "<th class=listheading nowrap>".$locale->text('Salesperson')."</th>";
+  $column_data{sales} = "<th class=listheading nowrap>Sales Person</th>";
   $column_data{nextdate} = "<th><a class=listheading href=$href&sort=nextdate>".$locale->text('Next')."</a></th>";
   $column_data{enddate} = "<th><a class=listheading href=$href&sort=enddate>".$locale->text('Ends')."</a></th>";
   $column_data{amount} = "<th class=listheading>".$locale->text('Amount')."</th>";
@@ -4398,7 +4398,7 @@ print qq|
   </tr>
   <tr height="5"></tr>
   <tr>
-    <td colspan=$colspan><b>$count_text</b></td>
+    <td colspan=$colspan>$count_text</td>
   </tr>
   <tr>
     <td>

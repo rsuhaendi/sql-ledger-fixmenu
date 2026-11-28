@@ -892,14 +892,47 @@ sub import_vc {
         if ($imported{$df} && defined $newform->{$df} && $newform->{$df} ne '') {
           my $d = $newform->{$df};
           $d =~ s/^\s+//; $d =~ s/\s+$//;
-          if ($d =~ /^\d{4}-\d{2}-\d{2}$/) {
-            $newform->{$df} = $d;
+          my $iso = '';
+          if ($d =~ /^(\d{4})-(\d{2})-(\d{2})$/) {
+            $iso = $d;
+          } elsif ($d =~ /^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$/) {
+            my ($p1, $p2, $p3) = ($1, $2, $3);
+            $p3 += 2000 if length($p3) == 2;
+            my ($yy,$mm,$dd);
+            if ($myconfig->{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=($p1,$p2,$p3); }
+            elsif ($myconfig->{dateformat} =~ /^dd/) { ($dd,$mm,$yy)=($p1,$p2,$p3); }
+            else { ($yy,$mm,$dd)=($p1,$p2,$p3); }
+            $iso = sprintf('%04d-%02d-%02d', $yy, $mm, $dd) if $yy && $mm && $dd;
+          } elsif ($d =~ /^\d+$/) {
+            my $n = $d;
+            # pad short numeric dates (e.g. 90426 -> 090426)
+            $n = sprintf('%06d', $n) if length($n) < 6;
+            if (length($n) == 8) {
+              if ($myconfig->{dateformat} =~ /^yyyy/) {
+                $iso = sprintf('%04d-%02d-%02d', substr($n,0,4), substr($n,4,2), substr($n,6,2));
+              } elsif ($myconfig->{dateformat} =~ /^mm/) {
+                my $yy = substr($n,4,4); $yy += 2000 if length($yy)==2;
+                $iso = sprintf('%04d-%02d-%02d', $yy, substr($n,0,2), substr($n,2,2));
+              } else { # dd...
+                my $yy = substr($n,4,4); $yy += 2000 if length($yy)==2;
+                $iso = sprintf('%04d-%02d-%02d', $yy, substr($n,2,2), substr($n,0,2));
+              }
+            } elsif (length($n) == 6) {
+              my ($yy,$mm,$dd);
+              if ($myconfig->{dateformat} =~ /^yy/) { ($yy,$mm,$dd)=('20'.substr($n,0,2),substr($n,2,2),substr($n,4,2)); }
+              elsif ($myconfig->{dateformat} =~ /^mm/) { ($mm,$dd,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+              else { ($dd,$mm,$yy)=(substr($n,0,2),substr($n,2,2),'20'.substr($n,4,2)); }
+              $iso = sprintf('%04d-%02d-%02d', $yy, $mm, $dd);
+            }
           } else {
             my $tmp = $form->datetonum($myconfig, $d);
-            if ($tmp) {
-              $newform->{$df} = $tmp;
+            if ($tmp && $tmp =~ /^(\d{4})(\d{2})(\d{2})$/) {
+              $iso = "$1-$2-$3";
+            } elsif ($tmp) {
+              $iso = $tmp;
             }
           }
+          $newform->{$df} = $iso if $iso;
         }
       }
 

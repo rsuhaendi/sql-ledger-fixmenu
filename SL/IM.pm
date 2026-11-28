@@ -895,7 +895,7 @@ sub import_vc {
           if ($d =~ /^\d{4}-\d{2}-\d{2}$/) {
             $newform->{$df} = $d;
           } else {
-            my $tmp = $form->datetonum(\%myconfig, $d);
+            my $tmp = $form->datetonum($myconfig, $d);
             if ($tmp) {
               $newform->{$df} = $tmp;
             }

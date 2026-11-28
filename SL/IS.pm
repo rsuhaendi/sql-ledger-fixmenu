@@ -840,7 +840,11 @@ sub post_invoice {
   %{ $form->{acc_trans} } = ();
 
   (undef, $form->{employee_id}) = split /--/, $form->{employee};
-  unless ($form->{employee_id}) {
+  if ($form->{import_no_employee_default} && ! $form->{employee_id}) {
+    # Imports must not silently assign the logged-in user as salesperson.
+    $form->{employee} = '';
+    $form->{employee_id} = 0;
+  } elsif (! $form->{employee_id}) {
     ($form->{employee}, $form->{employee_id}) = $form->get_employee($dbh);
   }
   

@@ -55,13 +55,18 @@ sub sales_invoice_links {
 	      c.accno AS taxaccount, a.accno AS arap_accno,
 	      ad.city
 	      FROM customer vc
-	      JOIN address ad ON (ad.trans_id = vc.id)
+	      LEFT JOIN address ad ON (ad.trans_id = vc.id)
 	      LEFT JOIN customertax ct ON (vc.id = ct.customer_id)
 	      LEFT JOIN employee e ON (e.id = vc.employee_id)
 	      LEFT JOIN chart c ON (c.id = ct.chart_id)
 	      LEFT JOIN chart a ON (a.id = vc.arap_accno_id)
 	      WHERE customernumber = ?|;
   my $cth = $dbh->prepare($query) || $form->dberror($query);
+
+  # Some sales exports carry the customer name instead of the number.
+  my $namequery = $query;
+  $namequery =~ s/WHERE customernumber = \?/WHERE vc.name = ?/;
+  my $cthname = $dbh->prepare($namequery) || $form->dberror($namequery);
   
   # employee
   $query = qq|SELECT id, name
@@ -164,9 +169,12 @@ sub sales_invoice_links {
         $terms = 0;
         %customertax = ();
 
+        my $csv_customer_name = $form->{"name_$i"};
         $cth->execute("$dl[$form->{$form->{type}}->{customernumber}{ndx}]");
         
+        my $customer_found = 0;
         while ($ref = $cth->fetchrow_hashref(NAME_lc)) {
+          $customer_found = 1;
           $arap_accno = $ref->{arap_accno};
           $terms = $ref->{terms};
           $form->{"customer_id_$i"} = $ref->{id};
@@ -177,6 +185,22 @@ sub sales_invoice_links {
           $customertax{$ref->{taxaccount}} = 1 unless $form->{"taxincluded_$i"};
         }
         $cth->finish;
+
+        if (! $customer_found && $csv_customer_name) {
+          $cthname->execute($csv_customer_name);
+          while ($ref = $cthname->fetchrow_hashref(NAME_lc)) {
+            $customer_found = 1;
+            $arap_accno = $ref->{arap_accno};
+            $terms = $ref->{terms};
+            $form->{"customer_id_$i"} = $ref->{id};
+            $form->{"name_$i"} = $ref->{name};
+            $form->{"city_$i"} = $ref->{city};
+            $form->{"employeename_$i"} ||= $ref->{employee};
+            $form->{"employee_id_$i"} ||= $ref->{employee_id};
+            $customertax{$ref->{taxaccount}} = 1 unless $form->{"taxincluded_$i"};
+          }
+          $cthname->finish;
+        }
 
         if (! $form->{"customer_id_$i"}) {
           $form->{"missingcustomer_$i"} = 1;
@@ -296,12 +320,17 @@ sub order_links {
 	      c.accno AS taxaccount,
 	      ad.city
 	      FROM $form->{vc} vc
-	      JOIN address ad ON (ad.trans_id = vc.id)
+	      LEFT JOIN address ad ON (ad.trans_id = vc.id)
 	      LEFT JOIN employee e ON (e.id = vc.employee_id)
 	      LEFT JOIN $form->{vc}tax ct ON (vc.id = ct.$form->{vc}_id)
 	      LEFT JOIN chart c ON (c.id = ct.chart_id)
 	      WHERE $form->{vc}number = ?|;
   my $cth = $dbh->prepare($query) || $form->dberror($query);
+
+  # Some exports carry the customer/vendor name instead of the number.
+  my $namequery = $query;
+  $namequery =~ s/WHERE \$form->{vc}number = \?/WHERE vc.name = ?/;
+  my $cthname = $dbh->prepare($namequery) || $form->dberror($namequery);
   
   # employee
   $query = qq|SELECT id, name
@@ -402,9 +431,12 @@ sub order_links {
         $terms = 0;
         %vctax = ();
 
+        my $csv_vc_name = $form->{"name_$i"};
         $cth->execute(qq|$dl[$form->{$form->{type}}->{"$form->{vc}number"}{ndx}]|);
         
+        my $vc_found = 0;
         while ($ref = $cth->fetchrow_hashref(NAME_lc)) {
+          $vc_found = 1;
           $terms = $ref->{terms};
           $form->{"$form->{vc}_id_$i"} = $ref->{id};
           $form->{"name_$i"} = $ref->{name};
@@ -414,6 +446,21 @@ sub order_links {
           $vctax{$ref->{taxaccount}} = 1;
         }
         $cth->finish;
+
+        if (! $vc_found && $csv_vc_name) {
+          $cthname->execute($csv_vc_name);
+          while ($ref = $cthname->fetchrow_hashref(NAME_lc)) {
+            $vc_found = 1;
+            $terms = $ref->{terms};
+            $form->{"$form->{vc}_id_$i"} = $ref->{id};
+            $form->{"name_$i"} = $ref->{name};
+            $form->{"city_$i"} = $ref->{city};
+            $form->{"employeename_$i"} ||= $ref->{employee};
+            $form->{"employee_id_$i"} ||= $ref->{employee_id};
+            $vctax{$ref->{taxaccount}} = 1;
+          }
+          $cthname->finish;
+        }
 
         
         if (! $form->{"$form->{vc}_id_$i"}) {
@@ -694,6 +741,7 @@ sub import_sales_invoice {
   $form->{employee} = qq|--$form->{"employee_id_1"}|;
   $form->{department} = qq|--$form->{"department_id_1"}|;
   $form->{warehouse} = qq|--$form->{"warehouse_id_1"}|;
+  $form->{import_no_employee_default} = 1;
 
   # post invoice
   my $rc = IS->post_invoice($myconfig, $form, $dbh);
@@ -805,6 +853,7 @@ sub import_order {
   $form->{employee} = qq|--$form->{"employee_id_1"}|;
   $form->{department} = qq|--$form->{"department_id_1"}|;
   $form->{warehouse} = qq|--$form->{"warehouse_id_1"}|;
+  $form->{import_no_employee_default} = 1;
 
   # save order
   my $rc = OE->save($myconfig, $form, $dbh);

@@ -954,6 +954,14 @@ sub transactions {
     $where .= " AND a.onhold = '1'";
   }
 
+  # Scheduled transactions have a row in recurring keyed by the transaction id.
+  # Show both paid and unpaid scheduled invoices by default.
+  if ($form->{scheduled}) {
+    $where .= " AND EXISTS (SELECT 1 FROM recurring r WHERE r.id = a.id)";
+    $form->{open} = 0;
+    $form->{closed} = 0;
+  }
+
   if ($form->{open} || $form->{closed}) {
     if ($form->{open}) {
       $where .= " AND a.amount != a.paid" unless $form->{closed};

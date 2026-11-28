@@ -1684,6 +1684,7 @@ sub search {
 		<td nowrap><input name=open class=checkbox type=checkbox value=Y checked> |.$locale->text('Open').qq|</td>
 		<td nowrap><input name=closed class=checkbox type=checkbox value=Y> |.$locale->text('Closed').qq|</td>
 		<td nowrap><input name=onhold class=checkbox type=checkbox value=Y> |.$locale->text('On Hold').qq|</td>
+		<td nowrap><input name=scheduled class=checkbox type=checkbox value=Y> |.$locale->text('Scheduled').qq|</td>
 		<td nowrap><input name=paidlate class=checkbox type=checkbox value=Y> |.$locale->text('Paid Late').qq|</td>
 		<td nowrap><input name=paidearly class=checkbox type=checkbox value=Y> |.$locale->text('Paid Early').qq|</td>
 	      </tr>
@@ -1904,14 +1905,14 @@ sub transactions {
   AA->transactions(\%myconfig, \%$form);
 
   $href = "$form->{script}?action=transactions";
-  for (qw(direction oldsort till outstanding path login summary)) { $href .= qq|&$_=$form->{$_}| }
+  for (qw(direction oldsort till outstanding path login summary scheduled)) { $href .= qq|&$_=$form->{$_}| }
   $href .= "&title=".$form->escape($form->{title});
   $href .= "&helpref=".$form->escape($form->{helpref});
 
   $form->sort_order();
   
   $callback = "$form->{script}?action=transactions";
-  for (qw(direction oldsort till outstanding path login summary)) { $callback .= qq|&$_=$form->{$_}| }
+  for (qw(direction oldsort till outstanding path login summary scheduled)) { $callback .= qq|&$_=$form->{$_}| }
   $callback .= "&title=".$form->escape($form->{title},1);
   $callback .= "&helpref=".$form->escape($form->{helpref},1);
 
@@ -2048,6 +2049,12 @@ sub transactions {
     $href .= "&onhold=$form->{onhold}";
     $option .= "\n<br>" if ($option);
     $option .= $locale->text('On Hold');
+  }
+  if ($form->{scheduled}) {
+    $callback .= "&scheduled=$form->{scheduled}";
+    $href .= "&scheduled=$form->{scheduled}";
+    $option .= "\n<br>" if ($option);
+    $option .= $locale->text('Scheduled');
   }
   if ($form->{paidlate}) {
     $callback .= "&paidlate=$form->{paidlate}";
